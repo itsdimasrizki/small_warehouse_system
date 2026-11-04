@@ -5,11 +5,6 @@
 #include "config/pins.h"
 #include "config/thresholds.h"
 
-// ==============================================================================
-// Driver: Array 6 Sensor Ultrasonik HC-SR04
-// Sequential Polling Non-Blocking untuk Menghindari Cross-Talk
-// ==============================================================================
-
 class UltrasonicArray {
 public:
     static const uint8_t SENSOR_COUNT = 6;

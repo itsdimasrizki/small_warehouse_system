@@ -5,10 +5,6 @@
 #include "config/pins.h"
 #include "config/thresholds.h"
 
-// ==============================================================================
-// Driver: Sensor Lingkungan & Keamanan (DHT11 & MQ2 Smoke/Gas)
-// ==============================================================================
-
 class EnvSensors {
 public:
     EnvSensors();

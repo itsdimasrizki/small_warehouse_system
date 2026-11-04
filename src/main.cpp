@@ -7,29 +7,19 @@
 #include "devices/rgb_indicator.h"
 #include "devices/alarm_buzzer.h"
 
-// ==============================================================================
-// Small Warehouse - Firmware Pengujian Perangkat Keras (Sensor Bring-up & Test)
-// Digunakan untuk memastikan setiap sensor dan aktuator berfungsi dengan normal
-// ==============================================================================
-
-// Instance Driver Perangkat Keras
 UltrasonicArray ultrasonicArray;
 EnvSensors envSensors;
-RgbIndicator rgbIndicator(false); // Default Common Cathode (atur true jika Common Anode)
+RgbIndicator rgbIndicator(false); 
 AlarmBuzzer buzzer;
 
-// State Global Sistem
 SystemState systemState;
 
-// Timer Millis Non-Blocking
 unsigned long lastUltrasonicPoll = 0;
 unsigned long lastEnvRead = 0;
 unsigned long lastDashboardPrint = 0;
 
-// Mode LED Common Anode flag
 bool isCommonAnode = false;
 
-// Deklarasi Prototipe Fungsi
 void runStartupSelfTest();
 void printDashboard();
 void handleSerialCommands();
@@ -42,18 +32,13 @@ void setup() {
     }
 
     Serial.println("\n");
-    Serial.println("==================================================================");
-    Serial.println("   SMALL WAREHOUSE IoT - PROGRAM PENGUJIAN PERANGKAT SENSOR       ");
-    Serial.println("==================================================================");
     Serial.println("[INFO] Menginisialisasi seluruh driver sensor & aktuator...");
 
-    // Inisialisasi masing-masing driver hardware
     ultrasonicArray.begin();
     envSensors.begin();
     rgbIndicator.begin();
     buzzer.begin();
 
-    // Inisialisasi nilai awal SystemState
     memset(&systemState, 0, sizeof(SystemState));
     systemState.rack_state = STATE_RACK_EMPTY;
     systemState.safety_state = STATE_SAFE_NORMAL;
@@ -76,7 +61,7 @@ void loop() {
         updateRackEvaluation();
     }
 
-    // 2. Pembacaan Sensor Lingkungan (DHT11 & MQ2) setiap 2 detik
+    // 2. DHT11 & MQ2 setiap 2 detik
     if (currentMillis - lastEnvRead >= INTERVAL_ENV_READ_MS) {
         lastEnvRead = currentMillis;
         envSensors.readSensors(systemState);
@@ -88,13 +73,9 @@ void loop() {
         printDashboard();
     }
 
-    // 4. Memproses Perintah Serial Pengguna
     handleSerialCommands();
 }
 
-// ==============================================================================
-// Self-Test Awal Aktuator (Buzzer & LED RGB)
-// ==============================================================================
 void runStartupSelfTest() {
     Serial.println(" -> Menguji Buzzer (2x Beep)...");
     buzzer.beep(80);
@@ -118,9 +99,6 @@ void runStartupSelfTest() {
     Serial.println(" -> Self-Test Aktuator Berhasil!\n");
 }
 
-// ==============================================================================
-// Evaluasi Sederhana Kapasitas Rak Berdasarkan Sensor Ultrasonik
-// ==============================================================================
 void updateRackEvaluation() {
     int occupiedCount = 0;
 
@@ -153,9 +131,6 @@ void updateRackEvaluation() {
     }
 }
 
-// ==============================================================================
-// Tampilan Dashboard Diagnostik ke Serial Monitor
-// ==============================================================================
 void printDashboard() {
     Serial.println("------------------------------------------------------------------");
     Serial.printf("[DIAGNOSTIK SENSOR] Waktu Aktif: %lu detik\n", millis() / 1000);
@@ -169,17 +144,15 @@ void printDashboard() {
         float dR = systemState.floors[i].distance_right_cm;
         bool occ = systemState.floors[i].is_occupied;
 
-        Serial.printf("   * %s -> Kiri: %5.1f cm | Kanan: %5.1f cm | Status: %s\n",
-                      floorNames[i],
-                      dL, dR,
-                      occ ? "[TERISI / OBJEK DETECTED]" : "[KOSONG]");
+        Serial.printf("   * %s -> Kiri: %5.1f cm | Kanan: %5.1f cm | Status: %s\n", floorNames[i], dL, dR, occ ? "[TERISI / OBJEK DETECTED]" : "[KOSONG]");
     }
+    
     Serial.printf("   >> Total Lantai Terisi: %d/3 (State: %s)\n",
                   systemState.occupied_floor_count,
                   systemState.rack_state == STATE_RACK_EMPTY ? "KOSONG (HIJAU)" :
                   systemState.rack_state == STATE_RACK_PARTIAL ? "SEBAGIAN (BIRU)" : "PENUH (MERAH)");
 
-    // 2. Data Sensor Lingkungan (DHT11 & MQ2)
+    // 2. DHT11 & MQ2
     Serial.println("\n2. Sensor Lingkungan & Bahaya:");
     if (isnan(systemState.temperature_c) || systemState.temperature_c == 0.0f) {
         Serial.println("   * Suhu / Kelembapan (DHT11, GPIO 4) : [BELUM TERBACA ATAU PERIKSA KABEL]");
@@ -207,14 +180,15 @@ void printDashboard() {
     Serial.println("------------------------------------------------------------------");
 }
 
-// ==============================================================================
-// Handler Perintah Serial Interaktif untuk Debugging Mandiri
-// ==============================================================================
 void handleSerialCommands() {
-    if (!Serial.available()) return;
+    if (!Serial.available()) {
+        return;
+    }
 
     char cmd = Serial.read();
-    while (Serial.available()) Serial.read(); // Kosongkan buffer serial
+    while (Serial.available()) {
+        Serial.read();
+    }
 
     switch (cmd) {
         case 'b':
@@ -239,13 +213,12 @@ void handleSerialCommands() {
         case 'C':
             isCommonAnode = !isCommonAnode;
             rgbIndicator.setCommonAnode(isCommonAnode);
-            Serial.printf("\n[CONFIG] Mode LED RGB diubah ke: %s\n",
-                          isCommonAnode ? "COMMON ANODE" : "COMMON CATHODE");
+            Serial.printf("\n[CONFIG] Mode LED RGB diubah ke: %s\n", isCommonAnode ? "COMMON ANODE" : "COMMON CATHODE");
             break;
 
         case 'u':
         case 'U':
-            Serial.println("\n[MANUAL TEST] Pembacaan langsung 6 ultrasonik:");
+            Serial.println("\n[MANUAL TEST] Pembacaan langsung 6 ultrasonik: ");
             for (uint8_t i = 0; i < 6; i++) {
                 float d = ultrasonicArray.readDirect(i);
                 Serial.printf("   Sensor [%d] %s: %.1f cm\n", i, ultrasonicArray.getSensorName(i), d);
@@ -255,13 +228,11 @@ void handleSerialCommands() {
 
         case 'h':
         case 'H':
-            Serial.println("\n============= DAFTAR PERINTAH SERIAL =============");
-            Serial.println("  'b' : Bunyikan Buzzer sesaat (300 ms)");
+            Serial.println("  'b' : Buzzer (300 ms)");
             Serial.println("  'r' : Tes siklus warna LED RGB (Merah -> Hijau -> Biru)");
-            Serial.println("  'c' : Beralih mode LED RGB (Common Cathode <-> Common Anode)");
-            Serial.println("  'u' : Uji baca langsung ke-6 sensor ultrasonik seketika");
-            Serial.println("  'h' : Tampilkan bantuan ini");
-            Serial.println("===================================================\n");
+            Serial.println("  'c' : Beralih mode LED RGB");
+            Serial.println("  'u' : 6 sensor ultrasonik");
+            Serial.println("  'h' : Tampilkan menu");
             break;
 
         default:

@@ -3,11 +3,6 @@
 #include "types/system_state.h"
 #include "config/pins.h"
 
-// ==============================================================================
-// Driver: LED RGB Indikator Status Gudang
-// Mendukung tipe Common Cathode (default) dan Common Anode
-// ==============================================================================
-
 class RgbIndicator {
 public:
     RgbIndicator(bool commonAnode = false);

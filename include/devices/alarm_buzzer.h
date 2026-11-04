@@ -3,10 +3,6 @@
 #include "types/system_state.h"
 #include "config/pins.h"
 
-// ==============================================================================
-// Driver: Active Buzzer Alarm
-// ==============================================================================
-
 class AlarmBuzzer {
 public:
     AlarmBuzzer();
