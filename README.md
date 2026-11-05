@@ -20,11 +20,12 @@ Sistem pemantauan kapasitas rak gudang 3 lantai berbasis IoT secara *real-time* 
 1. **Deteksi Kapasitas Rak Presisi Tinggi:**
    * Memakai 6 sensor ultrasonik HC-SR04 (2 sensor saling berhadapan di setiap lantai: Kiri & Kanan) untuk meminimalkan *blind spot*.
    * Menggunakan mekanisme *Sequential Polling Non-Blocking* (jeda $\ge 40\text{ ms}$ antar sensor) untuk mencegah interferensi pantulan (*cross-talk*).
-2. **Indikator Visual Kapasitas (LED RGB Utama):**
-   * **HIJAU** (`0, 255, 0`): Seluruh rak kosong ($0\%$).
-   * **BIRU** (`0, 0, 255`): Rak terisi sebagian ($33\% - 66\%$).
-   * **MERAH** (`255, 0, 0`): Seluruh lantai rak penuh ($100\%$).
-   * Mendukung mode *Common Cathode* (-) dan *Common Anode* (+).
+2. **Indikator Visual Kapasitas per Rak (3x LED RGB Diskret):**
+   * Masing-masing lantai rak dilengkapi 1 LED RGB (total 3 LED untuk 3 Rak):
+     * **HIJAU** (`0, 255, 0`): Rak tersebut kosong (0 sensor mendeteksi barang).
+     * **BIRU** (`0, 0, 255`): Rak terisi sebagian (1 sensor mendeteksi: kiri saja / kanan saja).
+     * **MERAH** (`255, 0, 0`): Rak terisi penuh (kedua sensor kiri & kanan mendeteksi barang).
+   * Konfigurasi perangkat keras: **Common Anode (+)** dengan kaki anoda terhubung ke $3.3\text{V}$ (didukung pula mode Common Cathode).
 3. **Sistem Proteksi Keselamatan Ruangan (Safety Alarm):**
    * Pemantauan suhu & kelembapan ruangan via DHT11 (Ambang bahaya: $T \ge 38.0^\circ\text{C}$).
    * Pemantauan kepekatan asap & gas via MQ2 pada jalur **ADC1** (Ambang bahaya: $\text{ADC} \ge 1800$).
@@ -46,12 +47,13 @@ Sistem pemantauan kapasitas rak gudang 3 lantai berbasis IoT secara *real-time* 
 | **Ultrasonik Lantai 2 Kiri** | TRIG / ECHO | `GPIO 27` / `GPIO 35` | Output / Input | Pin 35 Input-Only |
 | **Ultrasonik Lantai 2 Kanan** | TRIG / ECHO | `GPIO 26` / `GPIO 32` | Output / Input | I/O Digital Standar |
 | **Ultrasonik Lantai 3 Kiri** | TRIG / ECHO | `GPIO 25` / `GPIO 33` | Output / Input | I/O Digital Standar |
-| **Ultrasonik Lantai 3 Kanan** | TRIG / ECHO | `GPIO 17` / `GPIO 16` | Output / Input | GPIO Bebas Pakai |
+| **Ultrasonik Lantai 3 Kanan** | TRIG / ECHO | `GPIO 17` / `GPIO 12` | Output / Input | Pin 12 aman saat boot berkat divider 1k/2k ke GND |
 | **Sensor Suhu DHT11** | DATA | `GPIO 4` | Digital I/O | Wajib pull-up $10\text{ k}\Omega$ ke $3.3\text{V}$ |
 | **Sensor Asap MQ2** | A0 (Analog) | `GPIO 34` | Analog Input | ADC1 Channel 6 |
-| **LED RGB Utama** | R / G / B | `GPIO 21` / `22` / `23` | PWM Output | Beri resistor seri $220\text{ }\Omega$ |
+| **LED RGB Rak 1 (Lantai 1)** | R / G / B | `GPIO 21` / `22` / `23` | PWM Output | Resistor seri $220\text{ }\Omega$ (Common Anode) |
+| **LED RGB Rak 2 (Lantai 2)** | R / G / B | `GPIO 19` / `16` / `5`  | PWM Output | Resistor seri $220\text{ }\Omega$ (Common Anode) |
+| **LED RGB Rak 3 (Lantai 3)** | R / G / B | `GPIO 15` / `2`  / `0`  | PWM Output | Resistor seri $220\text{ }\Omega$ (Common Anode) |
 | **Active Buzzer** | Positif (+) | `GPIO 18` | Digital Output | Active High ($3.3\text{V}/5\text{V}$) |
-
 ---
 
 ## 📁 Struktur Direktori Proyek
@@ -162,13 +164,12 @@ File `src/main.cpp` telah dikonfigurasi sebagai program pengujian komprehensif t
 ### Perilaku Saat ESP32 Dinyalakan:
 1. **Self-Test Aktuator (Startup):**
    * Buzzer berbunyi 2x bip pendek.
-   * LED RGB menyala bergantian: **MERAH** $\rightarrow$ **HIJAU** $\rightarrow$ **BIRU** $\rightarrow$ **MATI**.
+   * 3x LED RGB menyala serentak: **MERAH** $\rightarrow$ **HIJAU** $\rightarrow$ **BIRU** $\rightarrow$ **MATI**.
 2. **Pemantauan Real-time (Looping Non-Blocking):**
    * Membaca 1 sensor ultrasonik setiap $40\text{ ms}$ secara bergantian.
    * Membaca sensor suhu/kelembapan DHT11 dan gas MQ2 setiap $2\text{ detik}$.
-   * Memperbarui warna LED RGB sesuai jumlah lantai yang terdeteksi terisi barang ($< 35\text{ cm}$).
+   * Memperbarui warna ke-3 LED RGB secara independen per rak sesuai deteksi objek ($< 35\text{ cm}$).
    * Mencetak tabel diagnostik rapi ke Serial Monitor setiap $1\text{ detik}$.
-
 ### Perintah Interaktif Serial Monitor
 Saat Serial Monitor terbuka (`pio device monitor -b 115200`), ketik huruf berikut lalu tekan **Enter**:
 * `b` : Membunyikan Buzzer manual selama 300 ms.

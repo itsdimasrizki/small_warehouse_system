@@ -15,7 +15,7 @@
 Sistem **Small Warehouse IoT** dirancang untuk memantau kapasitas penyimpanan rak gudang 3 lantai secara *real-time* sekaligus menjaga keamanan ruangan dari risiko kebakaran atau suhu berlebih. 
 Sistem ini memiliki tiga fungsi utama:
 1. **Deteksi Kapasitas Presisi Tinggi:** Menggunakan 6 sensor ultrasonik (HC-SR04) yang dipasang saling berhadapan (Kiri & Kanan) pada 3 lantai rak untuk meminimalkan *blind spot* (1 zona per lantai).
-2. **Visualisasi Status Gudang:** Menampilkan indikator ketersediaan rak secara keseluruhan melalui 1 LED RGB Utama (Hijau = Kosong, Biru = Terisi Sebagian, Merah = Penuh).
+2. **Visualisasi Status per Rak (3x LED RGB Diskret):** Menampilkan indikator ketersediaan masing-masing lantai rak melalui 1 LED RGB per rak (total 3 LED untuk 3 Rak): Hijau = Kosong (0 deteksi), Biru = Terisi Sebagian (1 sisi deteksi), Merah = Terisi Penuh (2 sisi deteksi).
 3. **Keamanan Lingkungan & Kontrol Alarm Dua Arah:** Memantau suhu/kelembapan (DHT11) dan asap/gas (MQ2). Jika melewati ambang batas aman, Buzzer menyala otomatis dan mengirimkan peringatan via MQTT. Operator juga dapat mematikan (*mute*) suara Buzzer dari jarak jauh melalui perintah MQTT.
 
 ---
@@ -33,10 +33,12 @@ Pemilihan pin pada NodeMCU ESP32 ini mematuhi aturan teknis arsitektur ESP32:
 | **Ultrasonik Lantai 2 Kiri** | TRIG / ECHO | GPIO 27 / GPIO 35 | Output / Input | Pin 35 khusus Input |
 | **Ultrasonik Lantai 2 Kanan** | TRIG / ECHO | GPIO 26 / GPIO 32 | Output / Input | I/O Digital |
 | **Ultrasonik Lantai 3 Kiri** | TRIG / ECHO | GPIO 25 / GPIO 33 | Output / Input | I/O Digital |
-| **Ultrasonik Lantai 3 Kanan** | TRIG / ECHO | GPIO 17 / GPIO 16 | Output / Input | UART2 RX/TX bebas pakai |
+| **Ultrasonik Lantai 3 Kanan** | TRIG / ECHO | GPIO 17 / GPIO 12 | Output / Input | Pin 12 aman saat boot berkat divider 1k/2k ke GND |
 | **Sensor Suhu DHT11** | DATA | GPIO 4 | Digital I/O | Butuh *pull-up* $10\text{ k}\Omega$ |
 | **Sensor Asap MQ2** | A0 (Analog) | GPIO 34 | Analog (ADC1) | Aman dipakai bersama Wi-Fi |
-| **LED RGB Utama** | R / G / B | GPIO 21 / 22 / 23 | PWM Output | Gunakan resistor $220\text{ }\Omega$ |
+| **LED RGB Rak 1 (Lantai 1)** | R / G / B | GPIO 21 / 22 / 23 | PWM Output | Resistor $220\text{ }\Omega$ (Common Anode) |
+| **LED RGB Rak 2 (Lantai 2)** | R / G / B | GPIO 19 / 16 / 5  | PWM Output | Resistor $220\text{ }\Omega$ (Common Anode) |
+| **LED RGB Rak 3 (Lantai 3)** | R / G / B | GPIO 15 / 2  / 0  | PWM Output | Resistor $220\text{ }\Omega$ (Common Anode) |
 | **Buzzer Alarm** | Positif (+) | GPIO 18 | Digital Output | Active Buzzer $3.3\text{V}/5\text{V}$ |
 
 > **Catatan Proteksi Tegangan:** Apabila HC-SR04 dan MQ2 diberi catu daya $5\text{V}$ (`VIN`), gunakan rangkaian pembagi tegangan (*voltage divider* resistor $1\text{ k}\Omega$ dan $2\text{ k}\Omega$) pada setiap jalur `ECHO` dan `A0` agar tegangan yang masuk ke GPIO ESP32 tidak melebihi batas aman $3.3\text{V}$.
@@ -53,12 +55,11 @@ Pemilihan pin pada NodeMCU ESP32 ini mematuhi aturan teknis arsitektur ESP32:
 * Total lantai terisi dihitung dengan menjumlahkan seluruh lantai:
   $$N_{\text{terisi}} = \sum_{i=1}^{3} \text{Occupied}_i \quad \text{dengan } N_{\text{terisi}} \in \{0, 1, 2, 3\}$$
 
-| State Kapasitas (`RackState`) | Kondisi Transisi ($N_{\text{terisi}}$) | Output LED RGB | Nilai PWM `(R, G, B)` |
+| State Rak ke-$i$ (`RackState`) | Kondisi Deteksi Sisi Sensor | Output LED RGB Rak | Nilai PWM `(R, G, B)` |
 | :--- | :--- | :--- | :--- |
-| `STATE_RACK_EMPTY` | $N_{\text{terisi}} = 0$ ($0\%$) | **HIJAU** | `(0, 255, 0)` |
-| `STATE_RACK_PARTIAL` | $N_{\text{terisi}} \in \{1, 2\}$ ($33\% - 66\%$) | **BIRU** | `(0, 0, 255)` |
-| `STATE_RACK_FULL` | $N_{\text{terisi}} = 3$ ($100\%$) | **MERAH** | `(255, 0, 0)` |
-
+| `STATE_RACK_EMPTY` | 0 sisi ($d_L \ge 35 \land d_R \ge 35$) | **HIJAU** | `(0, 255, 0)` |
+| `STATE_RACK_PARTIAL` | 1 sisi ($d_L < 35 \oplus d_R < 35$) | **BIRU** | `(0, 0, 255)` |
+| `STATE_RACK_FULL` | 2 sisi ($d_L < 35 \land d_R < 35$) | **MERAH** | `(255, 0, 0)` |
 #### B. FSM Keamanan & Alarm Buzzer (`safety_fsm`)
 Kondisi bahaya (`hazard_detected = true`) aktif apabila suhu ruangan $T \ge 38.0^\circ\text{C}$ **ATAU** nilai analog asap $\text{ADC}_{\text{MQ2}} \ge 1800$ (skala $0 - 4095$).
 
