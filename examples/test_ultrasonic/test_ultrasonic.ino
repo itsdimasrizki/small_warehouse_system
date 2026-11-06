@@ -1,8 +1,3 @@
-// ==============================================================================
-// Standalone Test: 6x HC-SR04 Ultrasonic Sensors (Sequential Polling)
-// Gunakan sketch ini jika hanya ingin menguji sensor ultrasonik secara terisolasi.
-// ==============================================================================
-
 #include <Arduino.h>
 #include <NewPing.h>
 
@@ -10,14 +5,14 @@
 
 // Mapping Pin Ultrasonic ESP32
 const uint8_t TRIG_PINS[6] = {13, 14, 27, 26, 25, 17};
-const uint8_t ECHO_PINS[6] = {36, 39, 35, 32, 33, 16};
+const uint8_t ECHO_PINS[6] = {36, 39, 35, 32, 33, 12};
 const char* SENSOR_NAMES[6] = {
     "Lantai 1 - Kiri  (Trig: 13, Echo: 36)",
     "Lantai 1 - Kanan (Trig: 14, Echo: 39)",
     "Lantai 2 - Kiri  (Trig: 27, Echo: 35)",
     "Lantai 2 - Kanan (Trig: 26, Echo: 32)",
     "Lantai 3 - Kiri  (Trig: 25, Echo: 33)",
-    "Lantai 3 - Kanan (Trig: 17, Echo: 16)"
+    "Lantai 3 - Kanan (Trig: 17, Echo: 12)"
 };
 
 NewPing sonars[6] = {

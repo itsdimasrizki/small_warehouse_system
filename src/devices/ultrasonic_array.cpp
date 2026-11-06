@@ -53,7 +53,7 @@ const char* UltrasonicArray::getSensorName(uint8_t sensorIndex) const {
         case 2: return "Lantai 2 - Kiri  (TRIG 27, ECHO 35)";
         case 3: return "Lantai 2 - Kanan (TRIG 26, ECHO 32)";
         case 4: return "Lantai 3 - Kiri  (TRIG 25, ECHO 33)";
-        case 5: return "Lantai 3 - Kanan (TRIG 17, ECHO 16)";
+        case 5: return "Lantai 3 - Kanan (TRIG 17, ECHO 12)";
         default: return "Sensor Tidak Dikenal";
     }
 }

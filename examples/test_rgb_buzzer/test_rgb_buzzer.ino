@@ -1,38 +1,57 @@
-// ==============================================================================
-// Standalone Test: LED RGB Utama & Buzzer Alarm
-// Menguji urutan warna RGB, deteksi Common Anode / Common Cathode, dan bunyi Buzzer.
-// ==============================================================================
-
 #include <Arduino.h>
 
-#define PIN_RGB_RED   21
-#define PIN_RGB_GREEN 22
-#define PIN_RGB_BLUE  23
-#define PIN_BUZZER    18
+// Rak 1 (Lantai 1)
+#define PIN_RGB1_RED   21
+#define PIN_RGB1_GREEN 22
+#define PIN_RGB1_BLUE  23
 
-// Ubah ke true jika LED RGB yang digunakan bertipe Common Anode (+), false jika Common Cathode (-)
-bool isCommonAnode = false;
+// Rak 2 (Lantai 2)
+#define PIN_RGB2_RED   19
+#define PIN_RGB2_GREEN 16
+#define PIN_RGB2_BLUE  5
 
-void setRgb(uint8_t r, uint8_t g, uint8_t b) {
+// Rak 3 (Lantai 3)
+#define PIN_RGB3_RED   15
+#define PIN_RGB3_GREEN 2
+#define PIN_RGB3_BLUE  0
+
+#define PIN_BUZZER     18
+
+bool isCommonAnode = true; // Default Common Anode (+)
+
+const uint8_t PINS_R[3] = {PIN_RGB1_RED, PIN_RGB2_RED, PIN_RGB3_RED};
+const uint8_t PINS_G[3] = {PIN_RGB1_GREEN, PIN_RGB2_GREEN, PIN_RGB3_GREEN};
+const uint8_t PINS_B[3] = {PIN_RGB1_BLUE, PIN_RGB2_BLUE, PIN_RGB3_BLUE};
+
+void setRackRgb(uint8_t rackIdx, uint8_t r, uint8_t g, uint8_t b) {
+    if (rackIdx >= 3) return;
     uint8_t valR = isCommonAnode ? (255 - r) : r;
     uint8_t valG = isCommonAnode ? (255 - g) : g;
     uint8_t valB = isCommonAnode ? (255 - b) : b;
-    analogWrite(PIN_RGB_RED, valR);
-    analogWrite(PIN_RGB_GREEN, valG);
-    analogWrite(PIN_RGB_BLUE, valB);
+    analogWrite(PINS_R[rackIdx], valR);
+    analogWrite(PINS_G[rackIdx], valG);
+    analogWrite(PINS_B[rackIdx], valB);
+}
+
+void setAllRgb(uint8_t r, uint8_t g, uint8_t b) {
+    for (uint8_t i = 0; i < 3; i++) {
+        setRackRgb(i, r, g, b);
+    }
 }
 
 void setup() {
     Serial.begin(115200);
     delay(1000);
-    Serial.println("\n=== TES MANDIRI LED RGB & BUZZER ALARM ===");
+    Serial.println("\n=== TES MANDIRI 3x LED RGB & BUZZER ALARM ===");
 
-    pinMode(PIN_RGB_RED, OUTPUT);
-    pinMode(PIN_RGB_GREEN, OUTPUT);
-    pinMode(PIN_RGB_BLUE, OUTPUT);
+    for (uint8_t i = 0; i < 3; i++) {
+        pinMode(PINS_R[i], OUTPUT);
+        pinMode(PINS_G[i], OUTPUT);
+        pinMode(PINS_B[i], OUTPUT);
+    }
     pinMode(PIN_BUZZER, OUTPUT);
 
-    setRgb(0, 0, 0);
+    setAllRgb(0, 0, 0);
     digitalWrite(PIN_BUZZER, LOW);
 }
 
@@ -43,19 +62,27 @@ void loop() {
     digitalWrite(PIN_BUZZER, LOW);
     delay(300);
 
-    Serial.println("-> LED HIJAU (Status Rak: Kosong)...");
-    setRgb(0, 255, 0);
+    Serial.println("-> Semua LED HIJAU (Status Rak: Kosong)...");
+    setAllRgb(0, 255, 0);
     delay(1500);
 
-    Serial.println("-> LED BIRU  (Status Rak: Terisi Sebagian)...");
-    setRgb(0, 0, 255);
+    Serial.println("-> Semua LED BIRU  (Status Rak: Terisi Sebagian)...");
+    setAllRgb(0, 0, 255);
     delay(1500);
 
-    Serial.println("-> LED MERAH (Status Rak: Penuh)...");
-    setRgb(255, 0, 0);
+    Serial.println("-> Semua LED MERAH (Status Rak: Penuh)...");
+    setAllRgb(255, 0, 0);
     delay(1500);
 
-    Serial.println("-> LED MATI...");
-    setRgb(0, 0, 0);
+    Serial.println("-> Uji Bergantian per Rak:");
+    for (uint8_t i = 0; i < 3; i++) {
+        Serial.printf("   * Rak %d menyala Hijau...\n", i + 1);
+        setAllRgb(0, 0, 0);
+        setRackRgb(i, 0, 255, 0);
+        delay(600);
+    }
+
+    Serial.println("-> Semua LED MATI...\n");
+    setAllRgb(0, 0, 0);
     delay(1000);
 }

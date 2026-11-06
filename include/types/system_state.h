@@ -21,6 +21,11 @@ struct FloorData {
     float distance_left_cm;     // Pembacaan sensor HC-SR04 Kiri (cm)
     float distance_right_cm;    // Pembacaan sensor HC-SR04 Kanan (cm)
     bool is_occupied;           // True jika terisi (jarak < threshold dan > 0)
+    int detected_sides;         // 0 = Kosong, 1 = Terisi 1 sisi, 2 = Terisi 2 sisi
+    RackState rack_state;       // State FSM Rak ini (EMPTY / PARTIAL / FULL)
+    uint8_t rgb_r;              // PWM Merah LED Rak (0 - 255)
+    uint8_t rgb_g;              // PWM Hijau LED Rak (0 - 255)
+    uint8_t rgb_b;              // PWM Biru LED Rak (0 - 255)
 };
 
 // Struct Global Status Sistem

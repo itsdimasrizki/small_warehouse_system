@@ -6,24 +6,32 @@
 #include "devices/env_sensors.h"
 #include "devices/rgb_indicator.h"
 #include "devices/alarm_buzzer.h"
+#include "fsm/rack_fsm.h"
+#include "fsm/safety_fsm.h"
 
+// Inisialisasi Driver Perangkat Keras
 UltrasonicArray ultrasonicArray;
 EnvSensors envSensors;
-RgbIndicator rgbIndicator(false); 
+RgbIndicator rgbIndicator(true); // Default Common Anode (+)
 AlarmBuzzer buzzer;
 
+// Inisialisasi Finite State Machine (FSM)
+RackFSM rackFsm(rgbIndicator);
+SafetyFSM safetyFsm(buzzer);
+
+// State Global Sistem
 SystemState systemState;
 
+// Penjadwalan Waktu Non-Blocking (millis)
 unsigned long lastUltrasonicPoll = 0;
 unsigned long lastEnvRead = 0;
 unsigned long lastDashboardPrint = 0;
 
-bool isCommonAnode = false;
+bool isCommonAnode = true;
 
 void runStartupSelfTest();
 void printDashboard();
 void handleSerialCommands();
-void updateRackEvaluation();
 
 void setup() {
     Serial.begin(115200);
@@ -32,21 +40,29 @@ void setup() {
     }
 
     Serial.println("\n");
-    Serial.println("[INFO] Menginisialisasi seluruh driver sensor & aktuator...");
+    Serial.println("[INFO] Menginisialisasi seluruh driver sensor, aktuator, dan FSM...");
 
     ultrasonicArray.begin();
     envSensors.begin();
     rgbIndicator.begin();
     buzzer.begin();
 
+    // Inisialisasi struct SystemState
     memset(&systemState, 0, sizeof(SystemState));
     systemState.rack_state = STATE_RACK_EMPTY;
+    for (int i = 0; i < 3; i++) {
+        systemState.floors[i].rack_state = STATE_RACK_EMPTY;
+    }
     systemState.safety_state = STATE_SAFE_NORMAL;
+
+    // Inisialisasi FSM
+    rackFsm.begin();
+    safetyFsm.begin(&systemState);
 
     Serial.println("[INFO] Inisialisasi selesai. Menjalankan Self-Test Aktuator...");
     runStartupSelfTest();
 
-    Serial.println("\n[SIAP] Memulai pemantauan sensor secara realtime...");
+    Serial.println("\n[SIAP] Memulai pemantauan sensor dan eksekusi FSM secara realtime...");
     Serial.println("[TIPS] Ketik 'h' lalu tekan Enter untuk melihat perintah interaktif.\n");
 }
 
@@ -54,25 +70,29 @@ void loop() {
     unsigned long currentMillis = millis();
 
     // 1. Pembacaan Ultrasonik Sekuensial Non-Blocking (1 sensor setiap 40 ms)
-    //    Mencegah interferensi gelombang ultrasonik (cross-talk) antara kiri & kanan.
+    //    dan evaluasi FSM Kapasitas Rak per lantai
     if (currentMillis - lastUltrasonicPoll >= INTERVAL_ULTRASONIC_POLL_MS) {
         lastUltrasonicPoll = currentMillis;
         ultrasonicArray.pollNextSensor(systemState);
-        updateRackEvaluation();
+        rackFsm.update(systemState);
     }
 
-    // 2. DHT11 & MQ2 setiap 2 detik
+    // 2. Pembacaan Sensor Lingkungan (DHT11 & MQ2) setiap 2 detik
     if (currentMillis - lastEnvRead >= INTERVAL_ENV_READ_MS) {
         lastEnvRead = currentMillis;
         envSensors.readSensors(systemState);
     }
 
-    // 3. Menampilkan Laporan Diagnostik ke Serial Monitor setiap 1 detik
+    // 3. Eksekusi FSM Keamanan setiap siklus loop agar pulsa alarm buzzer non-blocking akurat
+    safetyFsm.update(systemState);
+
+    // 4. Menampilkan Laporan Diagnostik ke Serial Monitor setiap 1 detik
     if (currentMillis - lastDashboardPrint >= 1000) {
         lastDashboardPrint = currentMillis;
         printDashboard();
     }
 
+    // 5. Penanganan Perintah Masuk via Serial Monitor
     handleSerialCommands();
 }
 
@@ -83,77 +103,47 @@ void runStartupSelfTest() {
     buzzer.beep(80);
     delay(200);
 
-    Serial.println(" -> Menguji LED RGB: MERAH...");
-    rgbIndicator.setRed();
+    Serial.println(" -> Menguji 3x LED RGB (Rak 1, 2, 3): MERAH...");
+    rgbIndicator.setAllColor(255, 0, 0);
     delay(400);
 
-    Serial.println(" -> Menguji LED RGB: HIJAU...");
-    rgbIndicator.setGreen();
+    Serial.println(" -> Menguji 3x LED RGB (Rak 1, 2, 3): HIJAU...");
+    rgbIndicator.setAllColor(0, 255, 0);
     delay(400);
 
-    Serial.println(" -> Menguji LED RGB: BIRU...");
-    rgbIndicator.setBlue();
+    Serial.println(" -> Menguji 3x LED RGB (Rak 1, 2, 3): BIRU...");
+    rgbIndicator.setAllColor(0, 0, 255);
     delay(400);
 
-    rgbIndicator.off();
+    rgbIndicator.offAll();
     Serial.println(" -> Self-Test Aktuator Berhasil!\n");
-}
-
-void updateRackEvaluation() {
-    int occupiedCount = 0;
-
-    for (int i = 0; i < 3; i++) {
-        float dL = systemState.floors[i].distance_left_cm;
-        float dR = systemState.floors[i].distance_right_cm;
-
-        // Suatu lantai dianggap terisi jika sensor kiri atau kanan membaca < 35 cm (> 0 cm)
-        bool leftDetected  = (dL > 0.0f && dL < RACK_DETECT_THRESHOLD_CM);
-        bool rightDetected = (dR > 0.0f && dR < RACK_DETECT_THRESHOLD_CM);
-
-        systemState.floors[i].is_occupied = (leftDetected || rightDetected);
-        if (systemState.floors[i].is_occupied) {
-            occupiedCount++;
-        }
-    }
-
-    systemState.occupied_floor_count = occupiedCount;
-
-    // Visualisasikan status kapasitas ke LED RGB untuk memverifikasi LED berjalan dinamis
-    if (occupiedCount == 0) {
-        systemState.rack_state = STATE_RACK_EMPTY;
-        rgbIndicator.setColorAndSync(0, 255, 0, systemState); // Hijau = Kosong
-    } else if (occupiedCount == 3) {
-        systemState.rack_state = STATE_RACK_FULL;
-        rgbIndicator.setColorAndSync(255, 0, 0, systemState); // Merah = Penuh
-    } else {
-        systemState.rack_state = STATE_RACK_PARTIAL;
-        rgbIndicator.setColorAndSync(0, 0, 255, systemState); // Biru = Terisi Sebagian
-    }
 }
 
 void printDashboard() {
     Serial.println("------------------------------------------------------------------");
-    Serial.printf("[DIAGNOSTIK SENSOR] Waktu Aktif: %lu detik\n", millis() / 1000);
+    Serial.printf("[DIAGNOSTIK SENSOR & FSM] Waktu Aktif: %lu detik\n", millis() / 1000);
     Serial.println("------------------------------------------------------------------");
 
-    // 1. Data Jarak 6 Sensor Ultrasonik
-    Serial.println("1. Sensor Ultrasonik (HC-SR04):");
-    const char* floorNames[3] = {"Lantai 1", "Lantai 2", "Lantai 3"};
+    // 1. Data Jarak 6 Sensor Ultrasonik & FSM Rak
+    Serial.println("1. Status Kapasitas Rak (HC-SR04 & RackFSM):");
+    const char* floorNames[3] = {"Lantai 1 (Rak 1)", "Lantai 2 (Rak 2)", "Lantai 3 (Rak 3)"};
     for (int i = 0; i < 3; i++) {
         float dL = systemState.floors[i].distance_left_cm;
         float dR = systemState.floors[i].distance_right_cm;
-        bool occ = systemState.floors[i].is_occupied;
+        int sides = systemState.floors[i].detected_sides;
+        float th = rackFsm.getThreshold(i);
+        const char* statusStr = RackFSM::getStateName(systemState.floors[i].rack_state);
 
-        Serial.printf("   * %s -> Kiri: %5.1f cm | Kanan: %5.1f cm | Status: %s\n", floorNames[i], dL, dR, occ ? "[TERISI / OBJEK DETECTED]" : "[KOSONG]");
+        Serial.printf("   * %s (Th: %.1f cm) -> Kiri: %5.1f cm | Kanan: %5.1f cm | Deteksi: %d sisi -> %s\n",
+                      floorNames[i], th, dL, dR, sides, statusStr);
     }
     
-    Serial.printf("   >> Total Lantai Terisi: %d/3 (State: %s)\n",
+    Serial.printf("   >> Total Lantai Terisi: %d/3 | FSM Rak Global: %s\n",
                   systemState.occupied_floor_count,
-                  systemState.rack_state == STATE_RACK_EMPTY ? "KOSONG (HIJAU)" :
-                  systemState.rack_state == STATE_RACK_PARTIAL ? "SEBAGIAN (BIRU)" : "PENUH (MERAH)");
+                  RackFSM::getStateName(systemState.rack_state));
 
-    // 2. DHT11 & MQ2
-    Serial.println("\n2. Sensor Lingkungan & Bahaya:");
+    // 2. DHT11 & MQ2 & FSM Safety
+    Serial.println("\n2. Sensor Lingkungan & FSM Keamanan (DHT11, MQ2 & SafetyFSM):");
     if (isnan(systemState.temperature_c) || systemState.temperature_c == 0.0f) {
         Serial.println("   * Suhu / Kelembapan (DHT11, GPIO 4) : [BELUM TERBACA ATAU PERIKSA KABEL]");
     } else {
@@ -167,16 +157,27 @@ void printDashboard() {
     Serial.printf("   * Asap/Gas Analog (MQ2, GPIO 34)     : %d ADC (0-4095)  %s\n",
                   systemState.smoke_adc,
                   (systemState.smoke_adc >= MQ2_HAZARD_THRESHOLD_ADC) ? "[PERINGATAN: ASAP PEKAT!]" : "[AMAN]");
-    Serial.printf("   >> Status Bahaya: %s\n",
-                  systemState.hazard_detected ? "BAHAYA TERDETEKSI!" : "AMAN");
+    Serial.printf("   >> Kondisi Bahaya : %s\n",
+                  systemState.hazard_detected ? "YA (BAHAYA AKTIF!)" : "TIDAK (AMAN)");
+    Serial.printf("   >> State SafetyFSM: %s\n",
+                  SafetyFSM::getStateName(systemState.safety_state));
 
     // 3. Status Aktuator
     Serial.println("\n3. Status Aktuator:");
-    Serial.printf("   * LED RGB Status   : R=%d, G=%d, B=%d (%s)\n",
-                  systemState.rgb_r, systemState.rgb_g, systemState.rgb_b,
-                  isCommonAnode ? "Mode Common Anode" : "Mode Common Cathode");
+    Serial.printf("   * Polaritas LED    : %s\n",
+                  isCommonAnode ? "COMMON ANODE (+)" : "COMMON CATHODE (-)");
+    for (int i = 0; i < 3; i++) {
+        const char* colorName = (systemState.floors[i].rack_state == STATE_RACK_EMPTY) ? "HIJAU (Kosong)" :
+                                (systemState.floors[i].rack_state == STATE_RACK_PARTIAL) ? "BIRU (Sebagian)" : "MERAH (Penuh)";
+        Serial.printf("   * LED RGB Rak %d    : R=%-3d G=%-3d B=%-3d -> %s\n",
+                      i + 1,
+                      systemState.floors[i].rgb_r,
+                      systemState.floors[i].rgb_g,
+                      systemState.floors[i].rgb_b,
+                      colorName);
+    }
     Serial.printf("   * Buzzer Alarm Pin : %s\n",
-                  systemState.buzzer_active ? "MENYALA (ON)" : "MATI (OFF)");
+                  systemState.buzzer_active ? "MENYALA (ON / PULSED)" : "MATI (OFF)");
     Serial.println("------------------------------------------------------------------");
 }
 
@@ -185,11 +186,21 @@ void handleSerialCommands() {
         return;
     }
 
-    char cmd = Serial.read();
-    while (Serial.available()) {
-        Serial.read();
+    String input = Serial.readStringUntil('\n');
+    input.trim();
+    if (input.length() == 0) return;
+
+    // Cek jika perintah string ditujukan untuk SafetyFSM
+    String upper = input;
+    upper.toUpperCase();
+    if (upper == "MUTE" || upper == "OFF" || upper == "ON" || upper == "AUTO") {
+        Serial.printf("\n[FSM SAFETY CMD] Perintah diterima: %s\n", upper.c_str());
+        safetyFsm.handleMqttCommand(upper, systemState);
+        return;
     }
 
+    // Karakter tunggal
+    char cmd = input.charAt(0);
     switch (cmd) {
         case 'b':
         case 'B':
@@ -197,16 +208,38 @@ void handleSerialCommands() {
             buzzer.beep(300);
             break;
 
+        case 'm':
+        case 'M':
+            Serial.println("\n[FSM SAFETY CMD] MUTE Alarm...");
+            safetyFsm.handleMqttCommand("MUTE", systemState);
+            break;
+
+        case 'o':
+        case 'O':
+            Serial.println("\n[FSM SAFETY CMD] Force ON Buzzer...");
+            safetyFsm.handleMqttCommand("ON", systemState);
+            break;
+
+        case 'a':
+        case 'A':
+            Serial.println("\n[FSM SAFETY CMD] Mode AUTO Safety...");
+            safetyFsm.handleMqttCommand("AUTO", systemState);
+            break;
+
         case 'r':
         case 'R':
-            Serial.println("\n[MANUAL TEST] Menjalankan siklus warna LED RGB...");
-            rgbIndicator.setRed();
+            Serial.println("\n[MANUAL TEST] Menjalankan siklus warna 3x LED RGB...");
+            Serial.println("  -> Semua Merah...");
+            rgbIndicator.setAllColor(255, 0, 0);
             delay(500);
-            rgbIndicator.setGreen();
+            Serial.println("  -> Semua Hijau...");
+            rgbIndicator.setAllColor(0, 255, 0);
             delay(500);
-            rgbIndicator.setBlue();
+            Serial.println("  -> Semua Biru...");
+            rgbIndicator.setAllColor(0, 0, 255);
             delay(500);
-            rgbIndicator.off();
+            rgbIndicator.offAll();
+            Serial.println("  -> Selesai.");
             break;
 
         case 'c':
@@ -228,11 +261,17 @@ void handleSerialCommands() {
 
         case 'h':
         case 'H':
-            Serial.println("  'b' : Buzzer (300 ms)");
-            Serial.println("  'r' : Tes siklus warna LED RGB (Merah -> Hijau -> Biru)");
-            Serial.println("  'c' : Beralih mode LED RGB");
-            Serial.println("  'u' : 6 sensor ultrasonik");
-            Serial.println("  'h' : Tampilkan menu");
+            Serial.println("\n--- MENU BANTUAN SERIAL MONITOR ---");
+            Serial.println("  'b'        : Beep Buzzer sekali (300 ms)");
+            Serial.println("  'r'        : Tes siklus warna 3x LED RGB (Merah -> Hijau -> Biru)");
+            Serial.println("  'c'        : Beralih mode polaritas LED RGB (Anode / Cathode)");
+            Serial.println("  'u'        : Baca langsung 6 sensor ultrasonik");
+            Serial.println("  'MUTE'/'m' : FSM Safety - MUTE / Diamkan alarm bahaya");
+            Serial.println("  'ON'/'o'   : FSM Safety - Nyalakan Buzzer uji manual (MANUAL_TEST)");
+            Serial.println("  'OFF'      : FSM Safety - Matikan Buzzer uji manual");
+            Serial.println("  'AUTO'/'a' : FSM Safety - Kembalikan ke mode evaluasi otomatis");
+            Serial.println("  'h'        : Tampilkan menu bantuan ini");
+            Serial.println("------------------------------------");
             break;
 
         default:
