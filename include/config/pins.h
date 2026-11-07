@@ -1,22 +1,22 @@
 #pragma once
 
-// Floor 1
+// Floor 1 UK T20 P48
 #define PIN_TRIG_F1_LEFT    27
-#define PIN_ECHO_F1_LEFT    34
+#define PIN_ECHO_F1_LEFT    35
 #define PIN_TRIG_F1_RIGHT   27
-#define PIN_ECHO_F1_RIGHT   35
+#define PIN_ECHO_F1_RIGHT   34
 
-// Floor 2
+// Floor 2 UK T20 P48
 #define PIN_TRIG_F2_LEFT    27
-#define PIN_ECHO_F2_LEFT    32
+#define PIN_ECHO_F2_LEFT    33
 #define PIN_TRIG_F2_RIGHT   27
-#define PIN_ECHO_F2_RIGHT   33
+#define PIN_ECHO_F2_RIGHT   32
 
-// Floor 3
+// Floor 3 UK T25 P48
 #define PIN_TRIG_F3_LEFT    27
-#define PIN_ECHO_F3_LEFT    25
+#define PIN_ECHO_F3_LEFT    26
 #define PIN_TRIG_F3_RIGHT   27
-#define PIN_ECHO_F3_RIGHT   26
+#define PIN_ECHO_F3_RIGHT   25
 
 // DHT11 
 #define PIN_DHT_DATA        4
