@@ -1,14 +1,34 @@
 #pragma once
 
+// ==============================================================================
+// Dimensi Fisik Rak per Lantai (cm)
+// Disesuaikan dengan ukuran fisik aktual rak:
+// Lantai 1: Tinggi (T) = 20 cm, Panjang (P) = 48 cm
+// Lantai 2: Tinggi (T) = 20 cm, Panjang (P) = 48 cm
+// Lantai 3: Tinggi (T) = 25 cm, Panjang (P) = 48 cm
+// ==============================================================================
+#define RACK1_LENGTH_CM             48.0f   // Panjang rak Lantai 1 (cm)
+#define RACK1_HEIGHT_CM             20.0f   // Tinggi rak Lantai 1 (cm)
+
+#define RACK2_LENGTH_CM             48.0f   // Panjang rak Lantai 2 (cm)
+#define RACK2_HEIGHT_CM             20.0f   // Tinggi rak Lantai 2 (cm)
+
+#define RACK3_LENGTH_CM             48.0f   // Panjang rak Lantai 3 (cm)
+#define RACK3_HEIGHT_CM             25.0f   // Tinggi rak Lantai 3 (cm)
+
 // Batas Deteksi Kapasitas Rak per Lantai (cm)
-// Setiap lantai rak dapat memiliki ukuran/ambang batas deteksi yang berbeda
-#define RACK1_DETECT_THRESHOLD_CM   35.0f   // Batas jarak Lantai 1 / Rak 1 (cm)
-#define RACK2_DETECT_THRESHOLD_CM   35.0f   // Batas jarak Lantai 2 / Rak 2 (cm)
-#define RACK3_DETECT_THRESHOLD_CM   35.0f   // Batas jarak Lantai 3 / Rak 3 (cm)
+// Karena sensor Kiri dan Kanan berhadapan sepanjang rak (P = 48 cm),
+// ambang batas deteksi ideal adalah separuh panjang rak (P / 2 = 24.0 cm):
+// - Jarak < 24 cm pada 1 sisi = Terisi Sebagian (Biru)
+// - Jarak < 24 cm pada 2 sisi = Terisi Penuh (Merah)
+// - Jarak >= 24 cm (tidak ada halangan) = Kosong (Hijau)
+#define RACK1_DETECT_THRESHOLD_CM   (RACK1_LENGTH_CM / 2.0f)   // 24.0f cm
+#define RACK2_DETECT_THRESHOLD_CM   (RACK2_LENGTH_CM / 2.0f)   // 24.0f cm
+#define RACK3_DETECT_THRESHOLD_CM   (RACK3_LENGTH_CM / 2.0f)   // 24.0f cm
 
 // Backward compatibility
 #define RACK_DETECT_THRESHOLD_CM    RACK1_DETECT_THRESHOLD_CM
-#define ULTRASONIC_MAX_DISTANCE_CM  200     // Batas jarak maksimum pembacaan (cm)
+#define ULTRASONIC_MAX_DISTANCE_CM  200     // Batas jarak maksimum pembacaan NewPing (cm)
 
 // Array statis threshold per rak (indeks 0 = Lantai 1, 1 = Lantai 2, 2 = Lantai 3)
 static const float RACK_THRESHOLDS_CM[3] = {

@@ -27,8 +27,8 @@ int main() {
     assert(!state.buzzer_active);
     std::cout << "[PASS] Inisialisasi awal berhasil." << std::endl;
 
-    // 2. Test RackFSM dengan ukuran threshold rak yang berbeda
-    // Di thresholds.h: Lantai 1: 35cm, Lantai 2: 35cm, Lantai 3: 35cm
+    // 2. Test RackFSM dengan ukuran threshold rak per lantai (P = 48 cm -> Threshold = 24 cm)
+    // Di thresholds.h: Lantai 1: 24cm, Lantai 2: 24cm, Lantai 3: 24cm
     std::cout << "Rack Thresholds: F1=" << rackFsm.getThreshold(0)
               << "cm, F2=" << rackFsm.getThreshold(1)
               << "cm, F3=" << rackFsm.getThreshold(2) << "cm" << std::endl;

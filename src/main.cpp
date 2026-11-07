@@ -145,16 +145,19 @@ void printDashboard() {
     // 2. DHT11 & MQ2 & FSM Safety
     Serial.println("\n2. Sensor Lingkungan & FSM Keamanan (DHT11, MQ2 & SafetyFSM):");
     if (isnan(systemState.temperature_c) || systemState.temperature_c == 0.0f) {
-        Serial.println("   * Suhu / Kelembapan (DHT11, GPIO 4) : [BELUM TERBACA ATAU PERIKSA KABEL]");
+        Serial.printf("   * Suhu / Kelembapan (DHT11, GPIO %d) : [BELUM TERBACA ATAU PERIKSA KABEL]\n", PIN_DHT_DATA);
     } else {
-        Serial.printf("   * Suhu Ruangan (DHT11, GPIO 4)       : %.1f °C  %s\n",
+        Serial.printf("   * Suhu Ruangan (DHT11, GPIO %d)       : %.1f °C  %s\n",
+                      PIN_DHT_DATA,
                       systemState.temperature_c,
                       (systemState.temperature_c >= TEMP_HAZARD_THRESHOLD_C) ? "[PERINGATAN: PANAS!]" : "[NORMAL]");
-        Serial.printf("   * Kelembapan Ruangan (DHT11, GPIO 4) : %.1f %%\n",
+        Serial.printf("   * Kelembapan Ruangan (DHT11, GPIO %d) : %.1f %%\n",
+                      PIN_DHT_DATA,
                       systemState.humidity_pct);
     }
 
-    Serial.printf("   * Asap/Gas Analog (MQ2, GPIO 34)     : %d ADC (0-4095)  %s\n",
+    Serial.printf("   * Asap/Gas Analog (MQ2, GPIO %d)     : %d ADC (0-4095)  %s\n",
+                  PIN_MQ2_ANALOG,
                   systemState.smoke_adc,
                   (systemState.smoke_adc >= MQ2_HAZARD_THRESHOLD_ADC) ? "[PERINGATAN: ASAP PEKAT!]" : "[AMAN]");
     Serial.printf("   >> Kondisi Bahaya : %s\n",

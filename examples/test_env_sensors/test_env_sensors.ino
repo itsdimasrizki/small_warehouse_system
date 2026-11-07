@@ -7,7 +7,7 @@
 #include <DHT.h>
 
 #define PIN_DHT_DATA   4
-#define PIN_MQ2_ANALOG 34 // ADC1 ESP32
+#define PIN_MQ2_ANALOG 36 // ADC1 ESP32 (GPIO 36 / SENSOR_VP)
 
 DHT dht(PIN_DHT_DATA, DHT11);
 
