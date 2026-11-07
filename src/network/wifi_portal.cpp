@@ -15,8 +15,8 @@ WifiPortal::WifiPortal()
 
 void WifiPortal::loadCredentials() {
     preferences.begin("warehouse", true); // Mode read-only
-    storedSSID = preferences.getString("ssid", WIFI_SSID);
-    storedPass = preferences.getString("pass", WIFI_PASSWORD);
+    storedSSID = preferences.getString("ssid", "");
+    storedPass = preferences.getString("pass", "");
     storedBroker = preferences.getString("broker", MQTT_BROKER);
     storedPort = preferences.getUShort("port", MQTT_PORT);
     preferences.end();
@@ -52,12 +52,13 @@ bool WifiPortal::begin(uint8_t timeoutSec) {
     Serial.println("[WIFI PORTAL] Memulai Manajemen Jaringan ESP32...");
     Serial.println("==================================================");
 
-    // Jika ada SSID yang tersimpan dan bukan placeholder awal
+    // Jika ada SSID yang tersimpan di NVS Flash dari konfigurasi via Web Portal
     if (storedSSID.length() > 0 && storedSSID != "YOUR_WIFI_SSID") {
-        Serial.printf("[WIFI] Mencoba koneksi ke SSID: '%s' (Batas waktu: %d detik)...\n",
+        Serial.printf("[WIFI] Mencoba koneksi ke SSID tersimpan: '%s' (Batas waktu: %d detik)...\n",
                       storedSSID.c_str(), timeoutSec);
 
         WiFi.mode(WIFI_STA);
+        WiFi.setTxPower(WIFI_POWER_11dBm);
         WiFi.begin(storedSSID.c_str(), storedPass.c_str());
 
         unsigned long startAttempt = millis();
@@ -68,19 +69,20 @@ bool WifiPortal::begin(uint8_t timeoutSec) {
 
         if (WiFi.status() == WL_CONNECTED) {
             Serial.println("\n[WIFI] BERHASIL TERHUBUNG!");
-            Serial.printf("[WIFI] IP Address  : %s\n", WiFi.localIP().toString().c_str());
-            Serial.printf("[WIFI] Gateway     : %s\n", WiFi.gatewayIP().toString().c_str());
+            Serial.printf("[WIFI] IP Address     : %s\n", WiFi.localIP().toString().c_str());
+            Serial.printf("[WIFI] Gateway        : %s\n", WiFi.gatewayIP().toString().c_str());
             Serial.printf("[WIFI] Kekuatan (RSSI): %d dBm\n", WiFi.RSSI());
             portalActive = false;
             return true;
         } else {
-            Serial.println("\n[WIFI] Gagal terhubung ke SSID tersimpan (Timeout atau Sandi Salah).");
+            Serial.println("\n[WIFI] Gagal terhubung ke Wi-Fi tersimpan (Timeout / Sandi Salah / Router Mati).");
         }
     } else {
-        Serial.println("[WIFI] Belum ada kredensial Wi-Fi tersimpan atau masih placeholder.");
+        Serial.println("[WIFI] Mode Non-Hardcode: Belum ada kredensial Wi-Fi tersimpan di NVS Flash.");
     }
 
-    // Jika gagal terhubung atau belum ada kredensial, otomatis luncurkan Captive Portal SoftAP
+    // Jika belum ada kredensial atau koneksi gagal, otomatis aktifkan SoftAP Captive Portal
+    Serial.println("[WIFI] Mengaktifkan SoftAP Captive Portal agar dapat dikonfigurasi via HP...");
     startPortal();
     return false;
 }
@@ -89,6 +91,7 @@ void WifiPortal::startPortal() {
     portalActive = true;
 
     WiFi.disconnect();
+    delay(100);
     WiFi.mode(WIFI_AP_STA); // Mode AP + STA agar bisa scan jaringan sekitar sambil menyajikan AP
 
     char apName[32];
@@ -96,8 +99,15 @@ void WifiPortal::startPortal() {
     snprintf(apName, sizeof(apName), "Warehouse-Rak-%04X", chipId);
 
     WiFi.softAPConfig(apIP, apIP, netMask);
-    WiFi.softAP(apName);
-
+    bool apSuccess = WiFi.softAP(apName);
+    if (!apSuccess) {
+        Serial.println("[WARN] Gagal menyalakan SoftAP di mode AP_STA, mencoba mode WIFI_AP...");
+        WiFi.mode(WIFI_AP);
+        delay(100);
+        WiFi.softAPConfig(apIP, apIP, netMask);
+        apSuccess = WiFi.softAP(apName);
+    }
+    WiFi.setTxPower(WIFI_POWER_11dBm);
     Serial.println("\n--------------------------------------------------");
     Serial.println("[CAPTIVE PORTAL AKTIF] Silakan sambungkan HP / Laptop Anda:");
     Serial.printf(" * Nama Wi-Fi (SSID) : %s\n", apName);

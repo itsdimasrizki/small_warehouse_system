@@ -1,8 +1,8 @@
 #pragma once
 
-// Konfigurasi Wi-Fi
-#define WIFI_SSID           "YOUR_WIFI_SSID"
-#define WIFI_PASSWORD       "YOUR_WIFI_PASSWORD"
+// Konfigurasi Wi-Fi Default (Dikosongkan agar selalu menggunakan Wi-Fi Portal via HP)
+#define WIFI_SSID           ""
+#define WIFI_PASSWORD       ""
 
 // Konfigurasi MQTT Broker
 #define MQTT_BROKER         "broker.emqx.io"

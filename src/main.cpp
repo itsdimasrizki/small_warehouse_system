@@ -1,4 +1,7 @@
 #include <Arduino.h>
+#include "esp_private/brownout.h"
+#include "soc/soc.h"
+#include "soc/rtc_cntl_reg.h"
 #include "config/pins.h"
 #include "config/thresholds.h"
 #include "types/system_state.h"
@@ -37,6 +40,10 @@ void printDashboard();
 void handleSerialCommands();
 
 void setup() {
+    // 1. Nonaktifkan Brownout Detector sesegera mungkin agar lonjakan arus RF Wi-Fi tidak mereset ESP32
+    esp_brownout_disable();
+    WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
+
     Serial.begin(115200);
     while (!Serial && millis() < 2000) {
         ; // Tunggu koneksi Serial Monitor
@@ -101,12 +108,24 @@ void loop() {
     // 5. Pemeliharaan Koneksi Wi-Fi & MQTT Client Non-Blocking
     mqttManager.loop();
 
-    // 6. Menampilkan Laporan Diagnostik ke Serial Monitor setiap 1 detik
-    if (currentMillis - lastDashboardPrint >= 1000) {
-        lastDashboardPrint = currentMillis;
-        printDashboard();
+    // 6. Menampilkan Laporan Diagnostik ke Serial Monitor dengan jeda yang nyaman dibaca
+    if (wifiPortal.isPortalActive()) {
+        // Saat portal aktif, jangan banjiri serial dengan dashboard sensor agar layar tenang
+        if (currentMillis - lastDashboardPrint >= 8000) {
+            lastDashboardPrint = currentMillis;
+            Serial.println("\n==================================================");
+            Serial.println("  [PORTAL SETUP AKTIF] Menunggu konfigurasi dari HP");
+            Serial.println("  1. Sambungkan Wi-Fi HP ke : Warehouse-Rak-XXXX");
+            Serial.println("  2. Buka Browser HP ke     : http://192.168.4.1/");
+            Serial.println("==================================================\n");
+        }
+    } else {
+        // Mode normal: tampilkan setiap 5 detik (ada jeda yang cukup untuk membaca)
+        if (currentMillis - lastDashboardPrint >= 5000) {
+            lastDashboardPrint = currentMillis;
+            printDashboard();
+        }
     }
-
     // 7. Penanganan Perintah Masuk via Serial Monitor
     handleSerialCommands();
 }
@@ -218,7 +237,7 @@ void printDashboard() {
     }
     Serial.printf("   * Topik Telemetri  : %s\n", TOPIC_TELEMETRY);
     Serial.printf("   * Topik Kontrol    : %s\n", TOPIC_BUZZER_CTRL);
-    Serial.println("------------------------------------------------------------------");
+    Serial.println("------------------------------------------------------------------\n\n");
 }
 
 void handleSerialCommands() {

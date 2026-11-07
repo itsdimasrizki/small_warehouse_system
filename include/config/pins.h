@@ -40,4 +40,4 @@
 #define PIN_RGB3_BLUE       14
 
 // Buzzer Alarm
-#define PIN_BUZZER          13
+#define PIN_BUZZER          15

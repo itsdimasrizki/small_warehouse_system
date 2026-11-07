@@ -56,7 +56,8 @@ void MqttManager::ensureWifiConnected() {
         if (WiFi.status() != WL_CONNECTED) {
             static bool reported = false;
             if (!reported) {
-                const char* ssid = (portal && portal->getSSID().length() > 0) ? portal->getSSID().c_str() : WIFI_SSID;
+                String ssidStr = (portal && portal->getSSID().length() > 0) ? portal->getSSID() : String(WIFI_SSID);
+                const char* ssid = ssidStr.length() > 0 ? ssidStr.c_str() : "(Belum Disetel)";
                 Serial.printf("[WIFI] Status: Belum terhubung ke '%s' (mencoba di latar belakang...)\n", ssid);
                 reported = true;
             }
