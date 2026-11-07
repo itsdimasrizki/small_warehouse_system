@@ -26,17 +26,17 @@
 
 // Rak 1 (Lantai 1)
 #define PIN_RGB1_RED        17
-#define PIN_RGB1_GREEN      16
-#define PIN_RGB1_BLUE       14
+#define PIN_RGB1_GREEN      14
+#define PIN_RGB1_BLUE       16
 
 // Rak 2 (Lantai 2)
 #define PIN_RGB2_RED        19
-#define PIN_RGB2_GREEN      18
-#define PIN_RGB2_BLUE       5
+#define PIN_RGB2_GREEN      5
+#define PIN_RGB2_BLUE       18
 
 // Rak 3 (Lantai 3)
 #define PIN_RGB3_RED        23
-#define PIN_RGB3_GREEN      22
-#define PIN_RGB3_BLUE       21
+#define PIN_RGB3_GREEN      21
+#define PIN_RGB3_BLUE       22
 // Buzzer Alarm
 #define PIN_BUZZER          15

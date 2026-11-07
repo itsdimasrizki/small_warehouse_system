@@ -18,6 +18,8 @@ void MqttManager::begin() {
     const char* broker = (portal && portal->getBroker().length() > 0) ? portal->getBroker().c_str() : MQTT_BROKER;
     uint16_t port = (portal && portal->getPort() > 0) ? portal->getPort() : MQTT_PORT;
 
+    // Mengizinkan koneksi TLS/SSL port 8883 tanpa validasi manual sertifikat CA
+    espClient.setInsecure();
     // Konfigurasi PubSubClient
     mqttClient.setServer(broker, port);
     mqttClient.setCallback(mqttCallback);
@@ -79,20 +81,10 @@ bool MqttManager::reconnectMqtt() {
 
     Serial.printf("[MQTT] Menghubungkan ke broker %s:%d...", broker, port);
 
-    // Buat Client ID unik berbasis MAC address ESP32
-    uint64_t chipMac = ESP.getEfuseMac();
-    char clientId[48];
-    snprintf(clientId, sizeof(clientId), "%s_%04X", MQTT_CLIENT_ID, (uint16_t)(chipMac & 0xFFFF));
-
-    bool connected = false;
-    if (strlen(MQTT_USER) > 0) {
-        connected = mqttClient.connect(clientId, MQTT_USER, MQTT_PASSWORD);
-    } else {
-        connected = mqttClient.connect(clientId);
-    }
+    bool connected = mqttClient.connect(MQTT_CLIENT_ID, MQTT_USER, MQTT_PASSWORD);
 
     if (connected) {
-        Serial.printf(" BERHASIL! (ID: %s)\n", clientId);
+        Serial.printf(" BERHASIL! (ID: %s)\n", MQTT_CLIENT_ID);
         // Subscribe ke topik kontrol alarm buzzer
         if (mqttClient.subscribe(TOPIC_BUZZER_CTRL)) {
             Serial.printf("[MQTT] Berhasil subscribe ke topik kontrol: %s\n", TOPIC_BUZZER_CTRL);

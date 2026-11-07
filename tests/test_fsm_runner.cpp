@@ -27,12 +27,10 @@ int main() {
     assert(!state.buzzer_active);
     std::cout << "[PASS] Inisialisasi awal berhasil." << std::endl;
 
-    // 2. Test RackFSM dengan ukuran threshold rak per lantai (P = 48 cm -> Threshold = 24 cm)
-    // Di thresholds.h: Lantai 1: 24cm, Lantai 2: 24cm, Lantai 3: 24cm
+    // 2. Test RackFSM dengan threshold deteksi 18 cm (bebas dari crosstalk ~24 cm pada rak 48 cm)
     std::cout << "Rack Thresholds: F1=" << rackFsm.getThreshold(0)
               << "cm, F2=" << rackFsm.getThreshold(1)
               << "cm, F3=" << rackFsm.getThreshold(2) << "cm" << std::endl;
-
     // Skenario A: Semua kosong (jarak > threshold)
     state.floors[0].distance_left_cm = 50.0f;
     state.floors[0].distance_right_cm = 50.0f;
@@ -55,10 +53,20 @@ int main() {
     assert(state.rack_state == STATE_RACK_EMPTY);
     std::cout << "[PASS] Skenario A: Semua rak kosong -> STATE_RACK_EMPTY (0 barang)." << std::endl;
 
-    // Skenario B: Lantai 1 terisi 1 sisi (Partial -> Biru)
-    state.floors[0].distance_left_cm = 20.0f; // < 35cm
-    state.floors[0].distance_right_cm = 50.0f;
+    // Skenario A2: Simulasi Crosstalk Akustik Langsung (dL dan dR ~24 cm pada rak 48 cm tanpa barang)
+    state.floors[0].distance_left_cm = 24.0f;
+    state.floors[0].distance_right_cm = 24.0f;
+    rackFsm.update(state);
+    assert(state.floors[0].rack_state == STATE_RACK_EMPTY);
+    assert(state.floors[0].detected_sides == 0);
+    assert(state.floors[0].rgb_r == 255); // Tetap MERAH (Crosstalk ditolak)
+    assert(state.floors[0].rgb_b == 0);
+    assert(state.floors[0].rgb_g == 0);
+    std::cout << "[PASS] Skenario A2: Crosstalk akustik langsung (~24cm) berhasil difilter -> Tetap KOSONG (MERAH)." << std::endl;
 
+    // Skenario B: Lantai 1 terisi 1 sisi (SOP: 1 barang terdeteksi di jarak 12cm < 18cm -> Biru)
+    state.floors[0].distance_left_cm = 12.0f;
+    state.floors[0].distance_right_cm = 50.0f;
     rackFsm.update(state);
 
     assert(state.floors[0].rack_state == STATE_RACK_PARTIAL);

@@ -33,20 +33,25 @@ void RackFSM::update(SystemState &state) {
         float dL = state.floors[i].distance_left_cm;
         float dR = state.floors[i].distance_right_cm;
         float currentThreshold = thresholds[i];
+        float rackLength = RACK_LENGTHS_CM[i];
 
-        bool leftDetected  = (dL > 0.0f && dL < currentThreshold);
-        bool rightDetected = (dR > 0.0f && dR < currentThreshold);
+        // Filter Crosstalk Akustik Langsung:
+        // Jika kedua sensor saling tembak langsung saat rak kosong (pin TRIG sama),
+        // gelombang satu arah menghasilkan pembacaan simetris di sekitar rackLength / 2.
+        bool isDirectCrosstalk = (dL >= (rackLength / 2.0f - 4.0f) && dL <= (rackLength / 2.0f + 4.0f)) &&
+                                 (dR >= (rackLength / 2.0f - 4.0f) && dR <= (rackLength / 2.0f + 4.0f));
+
+        bool leftDetected  = (dL > 0.0f && dL < currentThreshold && !isDirectCrosstalk);
+        bool rightDetected = (dR > 0.0f && dR < currentThreshold && !isDirectCrosstalk);
 
         int detectedSides = (leftDetected ? 1 : 0) + (rightDetected ? 1 : 0);
         state.floors[i].detected_sides = detectedSides;
         state.floors[i].is_occupied = (detectedSides > 0);
-
         if (state.floors[i].is_occupied) {
             occupiedCount++;
         }
 
         // Perhitungan Matematis Estimasi Rentang Terisi & Jumlah Barang (Opsi B):
-        float rackLength = RACK_LENGTHS_CM[i];
         float occupiedSpan = 0.0f;
         int itemCount = 0;
 

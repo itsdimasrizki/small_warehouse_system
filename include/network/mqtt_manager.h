@@ -1,6 +1,7 @@
 #pragma once
 #include <Arduino.h>
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
 #include "types/system_state.h"
@@ -32,7 +33,7 @@ public:
 private:
     SafetyFSM &safety;
     WifiPortal* portal;
-    WiFiClient espClient;
+    WiFiClientSecure espClient;
     PubSubClient mqttClient;
     unsigned long lastReconnectAttempt;
     unsigned long lastWifiCheck;

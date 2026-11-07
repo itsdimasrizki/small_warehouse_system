@@ -7,13 +7,13 @@
 // Lantai 2: Tinggi (T) = 20 cm, Panjang (P) = 48 cm
 // Lantai 3: Tinggi (T) = 25 cm, Panjang (P) = 48 cm
 // ==============================================================================
-#define RACK1_LENGTH_CM             58.0f   // Panjang rak Lantai 1 (cm)
+#define RACK1_LENGTH_CM             48.0f   // Panjang rak Lantai 1 (cm)
 #define RACK1_HEIGHT_CM             20.0f   // Tinggi rak Lantai 1 (cm)
 
-#define RACK2_LENGTH_CM             58.0f   // Panjang rak Lantai 2 (cm)
+#define RACK2_LENGTH_CM             48.0f   // Panjang rak Lantai 2 (cm)
 #define RACK2_HEIGHT_CM             20.0f   // Tinggi rak Lantai 2 (cm)
 
-#define RACK3_LENGTH_CM             58.0f   // Panjang rak Lantai 3 (cm)
+#define RACK3_LENGTH_CM             48.0f   // Panjang rak Lantai 3 (cm)
 #define RACK3_HEIGHT_CM             25.0f   // Tinggi rak Lantai 3 (cm)
 
 // Batas Deteksi Kapasitas Rak per Lantai (cm)
@@ -23,9 +23,12 @@
 // - Jarak < 24 cm pada 1 sisi = Terisi Sebagian (Biru)
 // - Jarak < 24 cm pada 2 sisi = Terisi Penuh (Hijau)
 // - Hazard (Suhu/Gas melebihi threshold) = Merah Kedip-Kedip
-#define RACK1_DETECT_THRESHOLD_CM   (RACK1_LENGTH_CM / 2.0f)   // 24.0f cm
-#define RACK2_DETECT_THRESHOLD_CM   (RACK2_LENGTH_CM / 2.0f)   // 24.0f cm
-#define RACK3_DETECT_THRESHOLD_CM   (RACK3_LENGTH_CM / 2.0f)   // 24.0f cm
+// Ambang batas deteksi barang (cm):
+// Pada rak 48 cm, sinyal tembak langsung satu arah (direct crosstalk) terbaca ~24 cm.
+// Threshold diatur ke 18.0 cm agar sinyal tembak langsung saat rak kosong tidak memicu false detection.
+#define RACK1_DETECT_THRESHOLD_CM   18.0f   // Batas deteksi Lantai 1 (cm)
+#define RACK2_DETECT_THRESHOLD_CM   18.0f   // Batas deteksi Lantai 2 (cm)
+#define RACK3_DETECT_THRESHOLD_CM   18.0f   // Batas deteksi Lantai 3 (cm)
 
 // Backward compatibility
 #define RACK_DETECT_THRESHOLD_CM    RACK1_DETECT_THRESHOLD_CM
@@ -47,7 +50,7 @@ static const float RACK_LENGTHS_CM[3] = {
 
 // Estimasi Lebar Standar 1 Unit Barang (cm) untuk Perhitungan Matematis Opsi B
 // Dapat disesuaikan dengan dimensi kardus/paket aktual yang digunakan
-#define DEFAULT_ITEM_WIDTH_CM       12.0f   // Estimasi lebar 1 barang / paket kardus (cm)
+#define DEFAULT_ITEM_WIDTH_CM       8.0f    // Estimasi lebar 1 barang / paket kardus (cm)
 
 // Batas Sensor Ruangan
 #define TEMP_HAZARD_THRESHOLD_C     50.0f   // Ambang batas suhu (°C)
