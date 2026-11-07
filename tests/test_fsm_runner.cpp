@@ -48,8 +48,10 @@ int main() {
     assert(state.floors[1].rack_state == STATE_RACK_EMPTY);
     assert(state.floors[2].rack_state == STATE_RACK_EMPTY);
     assert(state.occupied_floor_count == 0);
+    assert(state.total_item_count == 0);
+    assert(state.floors[0].item_count == 0);
     assert(state.rack_state == STATE_RACK_EMPTY);
-    std::cout << "[PASS] Skenario A: Semua rak kosong -> STATE_RACK_EMPTY (Hijau)." << std::endl;
+    std::cout << "[PASS] Skenario A: Semua rak kosong -> STATE_RACK_EMPTY (0 barang)." << std::endl;
 
     // Skenario B: Lantai 1 terisi 1 sisi (Partial -> Biru)
     state.floors[0].distance_left_cm = 20.0f; // < 35cm
@@ -61,8 +63,10 @@ int main() {
     assert(state.floors[0].detected_sides == 1);
     assert(state.floors[0].rgb_b == 255); // Biru
     assert(state.occupied_floor_count == 1);
+    assert(state.floors[0].item_count >= 1);
+    assert(state.total_item_count >= 1);
     assert(state.rack_state == STATE_RACK_PARTIAL);
-    std::cout << "[PASS] Skenario B: Lantai 1 terisi 1 sisi -> STATE_RACK_PARTIAL (Biru)." << std::endl;
+    std::cout << "[PASS] Skenario B: Lantai 1 terisi 1 sisi -> STATE_RACK_PARTIAL (" << state.floors[0].item_count << " barang)." << std::endl;
 
     // Skenario C: Lantai 1 terisi 2 sisi (Full -> Merah)
     state.floors[0].distance_right_cm = 15.0f; // < 35cm
@@ -71,8 +75,9 @@ int main() {
 
     assert(state.floors[0].rack_state == STATE_RACK_FULL);
     assert(state.floors[0].detected_sides == 2);
+    assert(state.floors[0].item_count >= 2);
     assert(state.floors[0].rgb_r == 255); // Merah
-    std::cout << "[PASS] Skenario C: Lantai 1 terisi 2 sisi -> STATE_RACK_FULL (Merah)." << std::endl;
+    std::cout << "[PASS] Skenario C: Lantai 1 terisi 2 sisi -> STATE_RACK_FULL (" << state.floors[0].item_count << " barang)." << std::endl;
 
     // Skenario D: Semua lantai terisi -> Global STATE_RACK_FULL
     state.floors[1].distance_left_cm = 10.0f;
@@ -81,8 +86,9 @@ int main() {
     rackFsm.update(state);
 
     assert(state.occupied_floor_count == 3);
+    assert(state.total_item_count >= 3);
     assert(state.rack_state == STATE_RACK_FULL);
-    std::cout << "[PASS] Skenario D: 3 lantai terisi -> Global STATE_RACK_FULL." << std::endl;
+    std::cout << "[PASS] Skenario D: 3 lantai terisi -> Global STATE_RACK_FULL (Total " << state.total_item_count << " barang)." << std::endl;
     // Skenario D2: Ukuran rak berbeda di tiap lantai (F1=35cm, F2=25cm, F3=15cm)
     const float differentThresholds[3] = {35.0f, 25.0f, 15.0f};
     RackFSM customRackFsm(rgb, differentThresholds);

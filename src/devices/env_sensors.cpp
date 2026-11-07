@@ -27,7 +27,7 @@ bool EnvSensors::readSensors(SystemState &state) {
     }
 
     state.smoke_adc = smoke;
-
+    state.smoke_pct = (static_cast<float>(smoke) / 4095.0f) * 100.0f;
     // Evaluasi kondisi bahaya berdasarkan ambang batas
     state.hazard_detected = (state.temperature_c >= TEMP_HAZARD_THRESHOLD_C) ||
                             (state.smoke_adc >= MQ2_HAZARD_THRESHOLD_ADC);

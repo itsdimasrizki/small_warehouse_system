@@ -8,6 +8,7 @@
 #include "devices/alarm_buzzer.h"
 #include "fsm/rack_fsm.h"
 #include "fsm/safety_fsm.h"
+#include "network/mqtt_manager.h"
 
 // Inisialisasi Driver Perangkat Keras
 UltrasonicArray ultrasonicArray;
@@ -18,6 +19,7 @@ AlarmBuzzer buzzer;
 // Inisialisasi Finite State Machine (FSM)
 RackFSM rackFsm(rgbIndicator);
 SafetyFSM safetyFsm(buzzer);
+MqttManager mqttManager(safetyFsm);
 
 // State Global Sistem
 SystemState systemState;
@@ -26,6 +28,7 @@ SystemState systemState;
 unsigned long lastUltrasonicPoll = 0;
 unsigned long lastEnvRead = 0;
 unsigned long lastDashboardPrint = 0;
+unsigned long lastTelemetryPublish = 0;
 
 bool isCommonAnode = true;
 
@@ -58,6 +61,7 @@ void setup() {
     // Inisialisasi FSM
     rackFsm.begin();
     safetyFsm.begin(&systemState);
+    mqttManager.begin();
 
     Serial.println("[INFO] Inisialisasi selesai. Menjalankan Self-Test Aktuator...");
     runStartupSelfTest();
@@ -85,14 +89,22 @@ void loop() {
 
     // 3. Eksekusi FSM Keamanan setiap siklus loop agar pulsa alarm buzzer non-blocking akurat
     safetyFsm.update(systemState);
+    // 4. Pengiriman Telemetri MQTT Berbasis JSON setiap 2 detik
+    if (currentMillis - lastTelemetryPublish >= INTERVAL_TELEMETRY_MS) {
+        lastTelemetryPublish = currentMillis;
+        mqttManager.publishTelemetry(systemState);
+    }
 
-    // 4. Menampilkan Laporan Diagnostik ke Serial Monitor setiap 1 detik
+    // 5. Pemeliharaan Koneksi Wi-Fi & MQTT Client Non-Blocking
+    mqttManager.loop();
+
+    // 6. Menampilkan Laporan Diagnostik ke Serial Monitor setiap 1 detik
     if (currentMillis - lastDashboardPrint >= 1000) {
         lastDashboardPrint = currentMillis;
         printDashboard();
     }
 
-    // 5. Penanganan Perintah Masuk via Serial Monitor
+    // 7. Penanganan Perintah Masuk via Serial Monitor
     handleSerialCommands();
 }
 
@@ -134,11 +146,14 @@ void printDashboard() {
         float th = rackFsm.getThreshold(i);
         const char* statusStr = RackFSM::getStateName(systemState.floors[i].rack_state);
 
-        Serial.printf("   * %s (Th: %.1f cm) -> Kiri: %5.1f cm | Kanan: %5.1f cm | Deteksi: %d sisi -> %s\n",
-                      floorNames[i], th, dL, dR, sides, statusStr);
+        float span = systemState.floors[i].occupied_span_cm;
+        int items = systemState.floors[i].item_count;
+        Serial.printf("   * %s (Th: %.1f cm) -> Kiri: %5.1f cm | Kanan: %5.1f cm | Terisi: %4.1f cm (%d unit) -> %s\n",
+                      floorNames[i], th, dL, dR, span, items, statusStr);
     }
     
-    Serial.printf("   >> Total Lantai Terisi: %d/3 | FSM Rak Global: %s\n",
+    Serial.printf("   >> Total Barang: %d unit | Total Lantai Terisi: %d/3 | FSM Rak Global: %s\n",
+                  systemState.total_item_count,
                   systemState.occupied_floor_count,
                   RackFSM::getStateName(systemState.rack_state));
 
@@ -156,9 +171,10 @@ void printDashboard() {
                       systemState.humidity_pct);
     }
 
-    Serial.printf("   * Asap/Gas Analog (MQ2, GPIO %d)     : %d ADC (0-4095)  %s\n",
+    Serial.printf("   * Asap/Gas Analog (MQ2, GPIO %d)     : %d ADC (%.1f%%)  %s\n",
                   PIN_MQ2_ANALOG,
                   systemState.smoke_adc,
+                  systemState.smoke_pct,
                   (systemState.smoke_adc >= MQ2_HAZARD_THRESHOLD_ADC) ? "[PERINGATAN: ASAP PEKAT!]" : "[AMAN]");
     Serial.printf("   >> Kondisi Bahaya : %s\n",
                   systemState.hazard_detected ? "YA (BAHAYA AKTIF!)" : "TIDAK (AMAN)");
@@ -181,6 +197,15 @@ void printDashboard() {
     }
     Serial.printf("   * Buzzer Alarm Pin : %s\n",
                   systemState.buzzer_active ? "MENYALA (ON / PULSED)" : "MATI (OFF)");
+
+    // 4. Status Jaringan & MQTT
+    Serial.println("\n4. Status Jaringan & MQTT:");
+    Serial.printf("   * Koneksi Wi-Fi    : %s\n",
+                  mqttManager.isWifiConnected() ? "TERHUBUNG (Online)" : "TERPUTUS / MENGHUBUNGKAN...");
+    Serial.printf("   * Broker MQTT      : %s\n",
+                  mqttManager.isMqttConnected() ? "TERHUBUNG (Active)" : "OFFLINE / MENCOBA KONEKSI...");
+    Serial.printf("   * Topik Telemetri  : %s\n", TOPIC_TELEMETRY);
+    Serial.printf("   * Topik Kontrol    : %s\n", TOPIC_BUZZER_CTRL);
     Serial.println("------------------------------------------------------------------");
 }
 

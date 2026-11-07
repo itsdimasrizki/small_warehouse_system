@@ -37,6 +37,17 @@ static const float RACK_THRESHOLDS_CM[3] = {
     RACK3_DETECT_THRESHOLD_CM
 };
 
+// Array statis panjang rak fisik per lantai (cm)
+static const float RACK_LENGTHS_CM[3] = {
+    RACK1_LENGTH_CM,
+    RACK2_LENGTH_CM,
+    RACK3_LENGTH_CM
+};
+
+// Estimasi Lebar Standar 1 Unit Barang (cm) untuk Perhitungan Matematis Opsi B
+// Dapat disesuaikan dengan dimensi kardus/paket aktual yang digunakan
+#define DEFAULT_ITEM_WIDTH_CM       12.0f   // Estimasi lebar 1 barang / paket kardus (cm)
+
 // Batas Sensor Ruangan
 #define TEMP_HAZARD_THRESHOLD_C     38.0f   // Ambang batas suhu (°C)
 #define MQ2_HAZARD_THRESHOLD_ADC    1800    // Ambang batas ADC MQ2 (0 - 4095)

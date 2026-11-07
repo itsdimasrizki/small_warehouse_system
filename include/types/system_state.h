@@ -26,6 +26,8 @@ struct FloorData {
     uint8_t rgb_r;              // PWM Merah LED Rak (0 - 255)
     uint8_t rgb_g;              // PWM Hijau LED Rak (0 - 255)
     uint8_t rgb_b;              // PWM Biru LED Rak (0 - 255)
+    float occupied_span_cm;     // Estimasi rentang panjang terisi oleh barang (cm)
+    int item_count;             // Estimasi jumlah barang di lantai ini (Opsi B)
 };
 
 // Struct Global Status Sistem
@@ -33,12 +35,14 @@ struct SystemState {
     // 3 Lantai Rak (0 = Lantai 1, 1 = Lantai 2, 2 = Lantai 3)
     FloorData floors[3];
     int occupied_floor_count;   // Jumlah lantai terisi (0, 1, 2, atau 3)
+    int total_item_count;       // Total estimasi barang di seluruh rak
     RackState rack_state;       // State FSM Kapasitas
 
     // Sensor Lingkungan
     float temperature_c;        // Suhu (°C) dari DHT11
     float humidity_pct;         // Kelembapan (%RH) dari DHT11
     int smoke_adc;              // Nilai ADC 12-bit MQ2 (0 - 4095)
+    float smoke_pct;            // Persentase konsentrasi asap/gas (0.0% - 100.0%)
     bool hazard_detected;       // True jika suhu >= 38.0C atau smoke_adc >= 1800
     SafetyState safety_state;   // State FSM Keamanan
 
