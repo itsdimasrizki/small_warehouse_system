@@ -1,9 +1,10 @@
 #include "network/mqtt_manager.h"
-
+#include "network/wifi_portal.h"
 MqttManager* MqttManager::instance = nullptr;
 
-MqttManager::MqttManager(SafetyFSM &safetyFsm)
+MqttManager::MqttManager(SafetyFSM &safetyFsm, WifiPortal* wifiPortal)
     : safety(safetyFsm),
+      portal(wifiPortal),
       mqttClient(espClient),
       lastReconnectAttempt(0),
       lastWifiCheck(0)
@@ -12,20 +13,18 @@ MqttManager::MqttManager(SafetyFSM &safetyFsm)
 }
 
 void MqttManager::begin() {
-    Serial.println("\n[NETWORK] Menginisialisasi koneksi Wi-Fi dan MQTT...");
+    Serial.println("\n[MQTT] Menginisialisasi MQTT Client...");
 
-    // Set Wi-Fi ke mode Station
-    WiFi.mode(WIFI_STA);
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-    Serial.printf("[WIFI] Menghubungkan ke SSID: %s (non-blocking)...\n", WIFI_SSID);
+    const char* broker = (portal && portal->getBroker().length() > 0) ? portal->getBroker().c_str() : MQTT_BROKER;
+    uint16_t port = (portal && portal->getPort() > 0) ? portal->getPort() : MQTT_PORT;
 
     // Konfigurasi PubSubClient
-    mqttClient.setServer(MQTT_BROKER, MQTT_PORT);
+    mqttClient.setServer(broker, port);
     mqttClient.setCallback(mqttCallback);
     // Perbesar buffer paket agar JSON lengkap tidak terpotong (default PubSubClient hanya 128/256 bytes)
     mqttClient.setBufferSize(1024);
 
-    Serial.printf("[MQTT] Broker diset ke: %s:%d (Buffer: 1024 bytes)\n", MQTT_BROKER, MQTT_PORT);
+    Serial.printf("[MQTT] Broker dikonfigurasi ke: %s:%d (Buffer: 1024 bytes)\n", broker, port);
 }
 
 void MqttManager::loop() {
@@ -47,14 +46,18 @@ void MqttManager::loop() {
 }
 
 void MqttManager::ensureWifiConnected() {
+    if (portal && portal->isPortalActive()) {
+        return; // Jangan coba reconnect STA jika sedang dalam mode Web Config Portal SoftAP
+    }
+
     unsigned long now = millis();
     if (now - lastWifiCheck >= INTERVAL_MQTT_RECONNECT_MS) {
         lastWifiCheck = now;
         if (WiFi.status() != WL_CONNECTED) {
-            // Coba reconnect Wi-Fi non-blocking jika terputus
             static bool reported = false;
             if (!reported) {
-                Serial.printf("[WIFI] Status: Belum terhubung ke '%s' (mencoba di latar belakang...)\n", WIFI_SSID);
+                const char* ssid = (portal && portal->getSSID().length() > 0) ? portal->getSSID().c_str() : WIFI_SSID;
+                Serial.printf("[WIFI] Status: Belum terhubung ke '%s' (mencoba di latar belakang...)\n", ssid);
                 reported = true;
             }
             WiFi.reconnect();
@@ -69,7 +72,11 @@ void MqttManager::ensureWifiConnected() {
 }
 
 bool MqttManager::reconnectMqtt() {
-    Serial.print("[MQTT] Menghubungkan ke broker MQTT...");
+    const char* broker = (portal && portal->getBroker().length() > 0) ? portal->getBroker().c_str() : MQTT_BROKER;
+    uint16_t port = (portal && portal->getPort() > 0) ? portal->getPort() : MQTT_PORT;
+    mqttClient.setServer(broker, port);
+
+    Serial.printf("[MQTT] Menghubungkan ke broker %s:%d...", broker, port);
 
     // Buat Client ID unik berbasis MAC address ESP32
     uint64_t chipMac = ESP.getEfuseMac();

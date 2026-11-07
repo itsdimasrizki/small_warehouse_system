@@ -8,8 +8,8 @@
 #include "devices/alarm_buzzer.h"
 #include "fsm/rack_fsm.h"
 #include "fsm/safety_fsm.h"
+#include "network/wifi_portal.h"
 #include "network/mqtt_manager.h"
-
 // Inisialisasi Driver Perangkat Keras
 UltrasonicArray ultrasonicArray;
 EnvSensors envSensors;
@@ -19,8 +19,8 @@ AlarmBuzzer buzzer;
 // Inisialisasi Finite State Machine (FSM)
 RackFSM rackFsm(rgbIndicator);
 SafetyFSM safetyFsm(buzzer);
-MqttManager mqttManager(safetyFsm);
-
+WifiPortal wifiPortal;
+MqttManager mqttManager(safetyFsm, &wifiPortal);
 // State Global Sistem
 SystemState systemState;
 
@@ -61,8 +61,8 @@ void setup() {
     // Inisialisasi FSM
     rackFsm.begin();
     safetyFsm.begin(&systemState);
+    wifiPortal.begin(15);
     mqttManager.begin();
-
     Serial.println("[INFO] Inisialisasi selesai. Menjalankan Self-Test Aktuator...");
     runStartupSelfTest();
 
@@ -73,6 +73,8 @@ void setup() {
 void loop() {
     unsigned long currentMillis = millis();
 
+    // 0. Layani Web Server Captive Portal jika mode AP sedang aktif
+    wifiPortal.loop();
     // 1. Pembacaan Ultrasonik Sekuensial Non-Blocking (1 sensor setiap 40 ms)
     //    dan evaluasi FSM Kapasitas Rak per lantai
     if (currentMillis - lastUltrasonicPoll >= INTERVAL_ULTRASONIC_POLL_MS) {
@@ -200,10 +202,18 @@ void printDashboard() {
 
     // 4. Status Jaringan & MQTT
     Serial.println("\n4. Status Jaringan & MQTT:");
-    Serial.printf("   * Koneksi Wi-Fi    : %s\n",
-                  mqttManager.isWifiConnected() ? "TERHUBUNG (Online)" : "TERPUTUS / MENGHUBUNGKAN...");
-    Serial.printf("   * Broker MQTT      : %s\n",
-                  mqttManager.isMqttConnected() ? "TERHUBUNG (Active)" : "OFFLINE / MENCOBA KONEKSI...");
+    if (wifiPortal.isPortalActive()) {
+        Serial.println("   * Mode Jaringan    : SOFTAP CAPTIVE PORTAL (Aktif di 192.168.4.1)");
+        Serial.println("   * Info Setup       : Sambungkan HP/Laptop ke Wi-Fi 'Warehouse-Rak-XXXX' untuk setup.");
+    } else {
+        Serial.printf("   * Koneksi Wi-Fi    : %s (SSID: %s)\n",
+                      wifiPortal.isConnected() ? "TERHUBUNG (Online)" : "TERPUTUS / MENGHUBUNGKAN...",
+                      wifiPortal.getSSID().c_str());
+        Serial.printf("   * IP Address       : %s\n", WiFi.localIP().toString().c_str());
+        Serial.printf("   * Broker MQTT      : %s (%s:%d)\n",
+                      mqttManager.isMqttConnected() ? "TERHUBUNG (Active)" : "OFFLINE / MENCOBA KONEKSI...",
+                      wifiPortal.getBroker().c_str(), wifiPortal.getPort());
+    }
     Serial.printf("   * Topik Telemetri  : %s\n", TOPIC_TELEMETRY);
     Serial.printf("   * Topik Kontrol    : %s\n", TOPIC_BUZZER_CTRL);
     Serial.println("------------------------------------------------------------------");
@@ -287,6 +297,18 @@ void handleSerialCommands() {
             }
             break;
 
+        case 'w':
+        case 'W':
+            Serial.println("\n[PORTAL] Membuka Web Portal SoftAP Konfigurasi Wi-Fi...");
+            wifiPortal.startPortal();
+            break;
+
+        case 'k':
+        case 'K':
+            Serial.println("\n[CONFIG] Mereset kredensial Wi-Fi tersimpan di NVS ke default...");
+            wifiPortal.resetSettings();
+            break;
+
         case 'h':
         case 'H':
             Serial.println("\n--- MENU BANTUAN SERIAL MONITOR ---");
@@ -298,6 +320,8 @@ void handleSerialCommands() {
             Serial.println("  'ON'/'o'   : FSM Safety - Nyalakan Buzzer uji manual (MANUAL_TEST)");
             Serial.println("  'OFF'      : FSM Safety - Matikan Buzzer uji manual");
             Serial.println("  'AUTO'/'a' : FSM Safety - Kembalikan ke mode evaluasi otomatis");
+            Serial.println("  'w'        : Buka SoftAP Captive Portal Konfigurasi Wi-Fi");
+            Serial.println("  'k'        : Reset kredensial Wi-Fi NVS ke default");
             Serial.println("  'h'        : Tampilkan menu bantuan ini");
             Serial.println("------------------------------------");
             break;

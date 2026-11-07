@@ -9,11 +9,12 @@
 #include "fsm/safety_fsm.h"
 #include "fsm/rack_fsm.h"
 
+class WifiPortal;
+
 class MqttManager {
 public:
-    // Konstruktor menerima referensi SafetyFSM untuk meneruskan perintah kontrol Buzzer
-    explicit MqttManager(SafetyFSM &safetyFsm);
-
+    // Konstruktor menerima referensi SafetyFSM dan opsional pointer ke WifiPortal
+    explicit MqttManager(SafetyFSM &safetyFsm, WifiPortal* wifiPortal = nullptr);
     // Inisialisasi Wi-Fi dan MQTT client
     void begin();
 
@@ -30,8 +31,8 @@ public:
 
 private:
     SafetyFSM &safety;
+    WifiPortal* portal;
     WiFiClient espClient;
-    PubSubClient mqttClient;
     unsigned long lastReconnectAttempt;
     unsigned long lastWifiCheck;
 
