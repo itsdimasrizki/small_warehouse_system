@@ -57,9 +57,9 @@ Pemilihan pin pada NodeMCU ESP32 ini mematuhi aturan teknis arsitektur ESP32:
 
 | State Rak ke-$i$ (`RackState`) | Kondisi Deteksi Sisi Sensor | Output LED RGB Rak | Nilai PWM `(R, G, B)` |
 | :--- | :--- | :--- | :--- |
-| `STATE_RACK_EMPTY` | 0 sisi ($d_L \ge 35 \land d_R \ge 35$) | **HIJAU** | `(0, 255, 0)` |
-| `STATE_RACK_PARTIAL` | 1 sisi ($d_L < 35 \oplus d_R < 35$) | **BIRU** | `(0, 0, 255)` |
-| `STATE_RACK_FULL` | 2 sisi ($d_L < 35 \land d_R < 35$) | **MERAH** | `(255, 0, 0)` |
+| `STATE_RACK_EMPTY` | 0 sisi ($d_L \ge 24 \land d_R \ge 24$) | **MERAH** | `(255, 0, 0)` |
+| `STATE_RACK_PARTIAL` | 1 sisi ($d_L < 24 \oplus d_R < 24$) | **BIRU** | `(0, 0, 255)` |
+| `STATE_RACK_FULL` | 2 sisi ($d_L < 24 \land d_R < 24$) | **HIJAU** | `(0, 255, 0)` |
 #### B. FSM Keamanan & Alarm Buzzer (`safety_fsm`)
 Kondisi bahaya (`hazard_detected = true`) aktif apabila suhu ruangan $T \ge 38.0^\circ\text{C}$ **ATAU** nilai analog asap $\text{ADC}_{\text{MQ2}} \ge 1800$ (skala $0 - 4095$).
 

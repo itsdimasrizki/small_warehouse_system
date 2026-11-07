@@ -33,6 +33,7 @@ private:
     SafetyFSM &safety;
     WifiPortal* portal;
     WiFiClient espClient;
+    PubSubClient mqttClient;
     unsigned long lastReconnectAttempt;
     unsigned long lastWifiCheck;
 

@@ -62,18 +62,17 @@ void loop() {
     digitalWrite(PIN_BUZZER, LOW);
     delay(300);
 
-    Serial.println("-> Semua LED HIJAU (Status Rak: Kosong)...");
-    setAllRgb(0, 255, 0);
+    Serial.println("-> Semua LED MERAH (Status Rak: Kosong)...");
+    setAllRgb(255, 0, 0);
     delay(1500);
 
     Serial.println("-> Semua LED BIRU  (Status Rak: Terisi Sebagian)...");
     setAllRgb(0, 0, 255);
     delay(1500);
 
-    Serial.println("-> Semua LED MERAH (Status Rak: Penuh)...");
-    setAllRgb(255, 0, 0);
+    Serial.println("-> Semua LED HIJAU (Status Rak: Penuh)...");
+    setAllRgb(0, 255, 0);
     delay(1500);
-
     Serial.println("-> Uji Bergantian per Rak:");
     for (uint8_t i = 0; i < 3; i++) {
         Serial.printf("   * Rak %d menyala Hijau...\n", i + 1);

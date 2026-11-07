@@ -1,11 +1,13 @@
 #include "fsm/safety_fsm.h"
 
-SafetyFSM::SafetyFSM(AlarmBuzzer &alarmBuzzer)
+SafetyFSM::SafetyFSM(AlarmBuzzer &alarmBuzzer, RgbIndicator *rgbIndicator)
     : buzzer(alarmBuzzer),
+      rgb(rgbIndicator),
       currentState(STATE_SAFE_NORMAL),
       lastStatePtr(nullptr),
       lastPulseMillis(0),
-      pulseActive(false)
+      pulseActive(false),
+      wasHazard(false)
 {
 }
 
@@ -14,6 +16,7 @@ void SafetyFSM::begin(SystemState *initialState) {
     lastStatePtr = initialState;
     lastPulseMillis = 0;
     pulseActive = false;
+    wasHazard = false;
     buzzer.off();
     if (initialState) {
         initialState->safety_state = STATE_SAFE_NORMAL;
@@ -64,13 +67,20 @@ void SafetyFSM::update(SystemState &state) {
 
         case STATE_ALARM_SILENCED:
             // Buzzer wajib nonaktif selama state SILENCED
-            pulseActive = false;
             if (buzzer.isActive()) {
                 buzzer.setStateAndSync(false, state);
             }
             // Auto-reset: jika bahaya sudah reda, kembali otomatis ke SAFE_NORMAL
             if (!hazard) {
                 currentState = STATE_SAFE_NORMAL;
+                pulseActive = false;
+            } else {
+                // Walaupun suara di-mute, LED RGB tetap berkedip merah selama bahaya masih ada
+                unsigned long interval = pulseActive ? BUZZER_ALARM_PULSE_ON_MS : BUZZER_ALARM_PULSE_OFF_MS;
+                if (now - lastPulseMillis >= interval) {
+                    lastPulseMillis = now;
+                    pulseActive = !pulseActive;
+                }
             }
             break;
 
@@ -85,6 +95,48 @@ void SafetyFSM::update(SystemState &state) {
 
     state.safety_state = currentState;
     state.buzzer_active = buzzer.isActive();
+
+    // Indikator LED RGB: Merah kedip-kedip saat sensor suhu/gas melewati threshold
+    if (hazard) {
+        if (pulseActive) {
+            if (rgb) rgb->setAllColor(255, 0, 0);
+            for (uint8_t i = 0; i < 3; i++) {
+                state.floors[i].rgb_r = 255;
+                state.floors[i].rgb_g = 0;
+                state.floors[i].rgb_b = 0;
+            }
+            state.rgb_r = 255;
+            state.rgb_g = 0;
+            state.rgb_b = 0;
+        } else {
+            if (rgb) rgb->offAll();
+            for (uint8_t i = 0; i < 3; i++) {
+                state.floors[i].rgb_r = 0;
+                state.floors[i].rgb_g = 0;
+                state.floors[i].rgb_b = 0;
+            }
+            state.rgb_r = 0;
+            state.rgb_g = 0;
+            state.rgb_b = 0;
+        }
+    } else if (wasHazard) {
+        // Bahaya baru saja reda -> kembalikan LED ke status rak (Hijau penuh, Merah kosong, Biru sebagian)
+        for (uint8_t i = 0; i < 3; i++) {
+            uint8_t r = 0, g = 0, b = 0;
+            if (state.floors[i].rack_state == STATE_RACK_EMPTY) {
+                r = 255; // Kosong = Merah
+            } else if (state.floors[i].rack_state == STATE_RACK_PARTIAL) {
+                b = 255; // Sebagian = Biru
+            } else {
+                g = 255; // Penuh = Hijau
+            }
+            if (rgb) rgb->setColor(i, r, g, b);
+            state.floors[i].rgb_r = r;
+            state.floors[i].rgb_g = g;
+            state.floors[i].rgb_b = b;
+        }
+    }
+    wasHazard = hazard;
 }
 
 void SafetyFSM::handleMqttCommand(const String &cmd, SystemState &state) {

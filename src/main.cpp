@@ -18,7 +18,7 @@ AlarmBuzzer buzzer;
 
 // Inisialisasi Finite State Machine (FSM)
 RackFSM rackFsm(rgbIndicator);
-SafetyFSM safetyFsm(buzzer);
+SafetyFSM safetyFsm(buzzer, &rgbIndicator);
 WifiPortal wifiPortal;
 MqttManager mqttManager(safetyFsm, &wifiPortal);
 // State Global Sistem
@@ -55,6 +55,7 @@ void setup() {
     systemState.rack_state = STATE_RACK_EMPTY;
     for (int i = 0; i < 3; i++) {
         systemState.floors[i].rack_state = STATE_RACK_EMPTY;
+        systemState.floors[i].rgb_r = 255; // Kosong = Merah
     }
     systemState.safety_state = STATE_SAFE_NORMAL;
 
@@ -150,8 +151,8 @@ void printDashboard() {
 
         float span = systemState.floors[i].occupied_span_cm;
         int items = systemState.floors[i].item_count;
-        Serial.printf("   * %s (Th: %.1f cm) -> Kiri: %5.1f cm | Kanan: %5.1f cm | Terisi: %4.1f cm (%d unit) -> %s\n",
-                      floorNames[i], th, dL, dR, span, items, statusStr);
+        Serial.printf("   * %s (Th: %.1f cm) -> Kiri: %5.1f cm | Kanan: %5.1f cm | Terisi: %4.1f cm (%d unit, %d sisi) -> %s\n",
+                      floorNames[i], th, dL, dR, span, items, sides, statusStr);
     }
     
     Serial.printf("   >> Total Barang: %d unit | Total Lantai Terisi: %d/3 | FSM Rak Global: %s\n",
@@ -188,8 +189,9 @@ void printDashboard() {
     Serial.printf("   * Polaritas LED    : %s\n",
                   isCommonAnode ? "COMMON ANODE (+)" : "COMMON CATHODE (-)");
     for (int i = 0; i < 3; i++) {
-        const char* colorName = (systemState.floors[i].rack_state == STATE_RACK_EMPTY) ? "HIJAU (Kosong)" :
-                                (systemState.floors[i].rack_state == STATE_RACK_PARTIAL) ? "BIRU (Sebagian)" : "MERAH (Penuh)";
+        const char* colorName = (systemState.hazard_detected) ? "MERAH KEDIP (Bahaya Suhu/Gas!)" :
+                                (systemState.floors[i].rack_state == STATE_RACK_EMPTY) ? "MERAH (Kosong)" :
+                                (systemState.floors[i].rack_state == STATE_RACK_PARTIAL) ? "BIRU (Sebagian)" : "HIJAU (Penuh)";
         Serial.printf("   * LED RGB Rak %d    : R=%-3d G=%-3d B=%-3d -> %s\n",
                       i + 1,
                       systemState.floors[i].rgb_r,

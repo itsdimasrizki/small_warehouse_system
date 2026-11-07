@@ -14,7 +14,7 @@ int main() {
     RgbIndicator rgb(true);
     AlarmBuzzer buzzer;
     RackFSM rackFsm(rgb);
-    SafetyFSM safetyFsm(buzzer);
+    SafetyFSM safetyFsm(buzzer, &rgb);
 
     SystemState state;
     memset(&state, 0, sizeof(SystemState));
@@ -44,7 +44,9 @@ int main() {
     rackFsm.update(state);
 
     assert(state.floors[0].rack_state == STATE_RACK_EMPTY);
-    assert(state.floors[0].rgb_g == 255); // Hijau
+    assert(state.floors[0].rgb_r == 255); // Kosong -> Merah
+    assert(state.floors[0].rgb_g == 0);
+    assert(state.floors[0].rgb_b == 0);
     assert(state.floors[1].rack_state == STATE_RACK_EMPTY);
     assert(state.floors[2].rack_state == STATE_RACK_EMPTY);
     assert(state.occupied_floor_count == 0);
@@ -76,7 +78,8 @@ int main() {
     assert(state.floors[0].rack_state == STATE_RACK_FULL);
     assert(state.floors[0].detected_sides == 2);
     assert(state.floors[0].item_count >= 2);
-    assert(state.floors[0].rgb_r == 255); // Merah
+    assert(state.floors[0].rgb_g == 255); // Penuh -> Hijau
+    assert(state.floors[0].rgb_r == 0);
     std::cout << "[PASS] Skenario C: Lantai 1 terisi 2 sisi -> STATE_RACK_FULL (" << state.floors[0].item_count << " barang)." << std::endl;
 
     // Skenario D: Semua lantai terisi -> Global STATE_RACK_FULL
@@ -132,16 +135,21 @@ int main() {
     safetyFsm.update(state);
     assert(state.safety_state == STATE_ALARM_TRIGGERED);
     assert(state.buzzer_active == true); // Fase pertama ON
+    assert(state.floors[0].rgb_r == 255); // Merah Kedip: Fase ON
+    assert(state.floors[0].rgb_g == 0);
+    assert(state.floors[0].rgb_b == 0);
     // Uji pulsa: setelah 200ms -> harus OFF
     mock_millis = 1205;
     safetyFsm.update(state);
     assert(state.buzzer_active == false); // Fase kedua OFF
+    assert(state.floors[0].rgb_r == 0);   // Merah Kedip: Fase OFF
 
     // Setelah 200ms lagi -> harus kembali ON
     mock_millis = 1410;
     safetyFsm.update(state);
-    assert(state.buzzer_active == true); // Fase ketiga ON
-    std::cout << "[PASS] Skenario F: Bahaya suhu memicu ALARM_TRIGGERED dengan non-blocking pulse buzzer." << std::endl;
+    assert(state.buzzer_active == true);  // Fase ketiga ON
+    assert(state.floors[0].rgb_r == 255); // Merah Kedip: Fase ON kembali
+    std::cout << "[PASS] Skenario F: Bahaya suhu memicu ALARM_TRIGGERED dengan non-blocking pulse buzzer & LED merah kedip-kedip." << std::endl;
 
     // Skenario G: Operator mengirim MUTE
     safetyFsm.handleMqttCommand("MUTE", state);
@@ -163,8 +171,10 @@ int main() {
     safetyFsm.update(state);
     assert(state.safety_state == STATE_SAFE_NORMAL);
     assert(state.buzzer_active == false);
-    std::cout << "[PASS] Skenario H: Auto-reset saat bahaya reda berhasil kembali ke STATE_SAFE_NORMAL." << std::endl;
-
+    assert(state.floors[0].rgb_b == 255); // Warna dikembalikan ke status rak (Sebagian = Biru)
+    assert(state.floors[0].rgb_r == 0);
+    assert(state.floors[2].rgb_r == 255); // Lantai 3 kosong -> Merah
+    std::cout << "[PASS] Skenario H: Auto-reset saat bahaya reda berhasil kembali ke STATE_SAFE_NORMAL & warna rak dipulihkan." << std::endl;
     // Skenario I: Perintah manual ON dan OFF
     safetyFsm.handleMqttCommand("ON", state);
     assert(state.safety_state == STATE_MANUAL_TEST);

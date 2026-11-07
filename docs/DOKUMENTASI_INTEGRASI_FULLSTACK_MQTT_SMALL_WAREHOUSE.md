@@ -74,7 +74,7 @@ Sistem saat ini dikonfigurasi ke public broker gratis (EMQX). Untuk production, 
       "is_occupied": true,
       "detected_sides": 2,
       "status": "FULL",
-      "led_color": "RED"
+      "led_color": "GREEN"
     },
     {
       "floor": 2,
@@ -96,7 +96,7 @@ Sistem saat ini dikonfigurasi ke public broker gratis (EMQX). Untuk production, 
       "is_occupied": false,
       "detected_sides": 0,
       "status": "EMPTY",
-      "led_color": "GREEN"
+      "led_color": "RED"
     }
   ],
   "summary": {
@@ -131,7 +131,7 @@ Sistem saat ini dikonfigurasi ke public broker gratis (EMQX). Untuk production, 
 | `is_occupied` | `bool` | `true` / `false` | Status apakah lantai memiliki barang (`true` jika ada deteksi $< 24\text{ cm}$). |
 | `detected_sides` | `int` | `0`, `1`, `2` | Jumlah sisi sensor yang mendeteksi objek. |
 | `status` | `string` | `"EMPTY"`, `"PARTIAL"`, `"FULL"` | State FSM kapasitas lantai: <br>• `EMPTY`: Kosong (0 deteksi)<br>• `PARTIAL`: Terisi Sebagian (1 sisi deteksi)<br>• `FULL`: Terisi Penuh (2 sisi deteksi). |
-| `led_color` | `string` | `"GREEN"`, `"BLUE"`, `"RED"` | Warna indikator LED fisik di rak saat ini. Frontend dapat mewarnai badge rak sesuai key ini. |
+| `led_color` | `string` | `"GREEN"`, `"BLUE"`, `"RED"`, `"RED_BLINKING"` | Warna indikator LED fisik di rak saat ini: <br>• `GREEN`: Penuh (Full)<br>• `BLUE`: Terisi Sebagian (Partial)<br>• `RED`: Kosong (Empty)<br>• `RED_BLINKING`: Bahaya Suhu/Gas Melebihi Threshold. Frontend dapat mewarnai badge rak sesuai key ini. |
 
 #### B. Objek `summary` (Agregasi Seluruh Gudang)
 | Key | Tipe Data | Nilai | Penjelasan untuk Frontend |
@@ -295,9 +295,10 @@ client.on('reconnect', () => {
 
 1. **Komponen Visualisasi Rak 3 Lantai:**
    * Gunakan `data.floors[i].led_color` untuk mengubah warna card/lampu rak:
-     * `"GREEN"` $\rightarrow$ CSS Badge Hijau (`#10b981`), Label: *"Kosong (0 barang)"*
+     * `"GREEN"` $\rightarrow$ CSS Badge Hijau (`#10b981`), Label: *"Penuh"*
      * `"BLUE"` $\rightarrow$ CSS Badge Biru (`#0284c7`), Label: *"Terisi Sebagian"*
-     * `"RED"` $\rightarrow$ CSS Badge Merah (`#ef4444`), Label: *"Penuh"*
+     * `"RED"` $\rightarrow$ CSS Badge Merah (`#ef4444`), Label: *"Kosong (0 barang)"*
+     * `"RED_BLINKING"` $\rightarrow$ CSS Animasi Kedip Merah, Label: *"Bahaya Lingkungan!"*
    * Gunakan `data.floors[i].occupied_span_cm` untuk Progress Bar:
      $$\text{Width \%} = \left(\frac{\text{occupied\_span\_cm}}{48.0}\right) \times 100\%$$
 2. **Komponen Banner Bahaya (Emergency Alert):**

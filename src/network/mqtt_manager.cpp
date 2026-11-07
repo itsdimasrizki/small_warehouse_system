@@ -146,8 +146,9 @@ bool MqttManager::publishTelemetry(const SystemState &state) {
 
         const char* statusStr = (state.floors[i].rack_state == STATE_RACK_EMPTY) ? "EMPTY" :
                                 (state.floors[i].rack_state == STATE_RACK_PARTIAL) ? "PARTIAL" : "FULL";
-        const char* ledColorStr = (state.floors[i].rack_state == STATE_RACK_EMPTY) ? "GREEN" :
-                                  (state.floors[i].rack_state == STATE_RACK_PARTIAL) ? "BLUE" : "RED";
+        const char* ledColorStr = (state.hazard_detected) ? "RED_BLINKING" :
+                                  (state.floors[i].rack_state == STATE_RACK_EMPTY) ? "RED" :
+                                  (state.floors[i].rack_state == STATE_RACK_PARTIAL) ? "BLUE" : "GREEN";
         f["status"] = statusStr;
         f["led_color"] = ledColorStr;
     }

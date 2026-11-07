@@ -3,9 +3,9 @@
 
 // State FSM Kapasitas Rak
 enum RackState {
-    STATE_RACK_EMPTY = 0,    // 0 lantai terisi (0%)       -> Indikator LED HIJAU
-    STATE_RACK_PARTIAL = 1,  // 1-2 lantai terisi (33-66%) -> Indikator LED BIRU
-    STATE_RACK_FULL = 2      // 3 lantai terisi (100%)     -> Indikator LED MERAH
+    STATE_RACK_EMPTY = 0,    // 0 barang terdeteksi (0%)   -> Indikator LED MERAH
+    STATE_RACK_PARTIAL = 1,  // Terisi sebagian (33-66%)   -> Indikator LED BIRU
+    STATE_RACK_FULL = 2      // Terisi penuh (100%)        -> Indikator LED HIJAU
 };
 
 // State FSM Ruangan & Alarm Buzzer

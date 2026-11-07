@@ -7,21 +7,22 @@
 // Lantai 2: Tinggi (T) = 20 cm, Panjang (P) = 48 cm
 // Lantai 3: Tinggi (T) = 25 cm, Panjang (P) = 48 cm
 // ==============================================================================
-#define RACK1_LENGTH_CM             48.0f   // Panjang rak Lantai 1 (cm)
+#define RACK1_LENGTH_CM             58.0f   // Panjang rak Lantai 1 (cm)
 #define RACK1_HEIGHT_CM             20.0f   // Tinggi rak Lantai 1 (cm)
 
-#define RACK2_LENGTH_CM             48.0f   // Panjang rak Lantai 2 (cm)
+#define RACK2_LENGTH_CM             58.0f   // Panjang rak Lantai 2 (cm)
 #define RACK2_HEIGHT_CM             20.0f   // Tinggi rak Lantai 2 (cm)
 
-#define RACK3_LENGTH_CM             48.0f   // Panjang rak Lantai 3 (cm)
+#define RACK3_LENGTH_CM             58.0f   // Panjang rak Lantai 3 (cm)
 #define RACK3_HEIGHT_CM             25.0f   // Tinggi rak Lantai 3 (cm)
 
 // Batas Deteksi Kapasitas Rak per Lantai (cm)
 // Karena sensor Kiri dan Kanan berhadapan sepanjang rak (P = 48 cm),
 // ambang batas deteksi ideal adalah separuh panjang rak (P / 2 = 24.0 cm):
+// - Jarak >= 24 cm (tidak ada halangan) = Kosong (Merah)
 // - Jarak < 24 cm pada 1 sisi = Terisi Sebagian (Biru)
-// - Jarak < 24 cm pada 2 sisi = Terisi Penuh (Merah)
-// - Jarak >= 24 cm (tidak ada halangan) = Kosong (Hijau)
+// - Jarak < 24 cm pada 2 sisi = Terisi Penuh (Hijau)
+// - Hazard (Suhu/Gas melebihi threshold) = Merah Kedip-Kedip
 #define RACK1_DETECT_THRESHOLD_CM   (RACK1_LENGTH_CM / 2.0f)   // 24.0f cm
 #define RACK2_DETECT_THRESHOLD_CM   (RACK2_LENGTH_CM / 2.0f)   // 24.0f cm
 #define RACK3_DETECT_THRESHOLD_CM   (RACK3_LENGTH_CM / 2.0f)   // 24.0f cm
@@ -49,7 +50,7 @@ static const float RACK_LENGTHS_CM[3] = {
 #define DEFAULT_ITEM_WIDTH_CM       12.0f   // Estimasi lebar 1 barang / paket kardus (cm)
 
 // Batas Sensor Ruangan
-#define TEMP_HAZARD_THRESHOLD_C     38.0f   // Ambang batas suhu (°C)
+#define TEMP_HAZARD_THRESHOLD_C     50.0f   // Ambang batas suhu (°C)
 #define MQ2_HAZARD_THRESHOLD_ADC    1800    // Ambang batas ADC MQ2 (0 - 4095)
 
 // Durasi Pulsa Beep Alarm Buzzer Bahaya (Non-blocking)

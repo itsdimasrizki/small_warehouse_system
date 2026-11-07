@@ -7,7 +7,22 @@ RackFSM::RackFSM(RgbIndicator &rgbIndicator, const float* customThresholds)
 }
 
 void RackFSM::begin() {
-    // Inisialisasi awal FSM Rak
+    for (uint8_t i = 0; i < FLOOR_COUNT; i++) {
+        rgb.setRed(i); // Inisialisasi awal rak kosong: MERAH
+    }
+}
+
+void RackFSM::applyRgbColors(SystemState &state) {
+    if (state.hazard_detected) return;
+    for (uint8_t i = 0; i < FLOOR_COUNT; i++) {
+        if (state.floors[i].rack_state == STATE_RACK_EMPTY) {
+            rgb.setColorAndSync(i, 255, 0, 0, state);
+        } else if (state.floors[i].rack_state == STATE_RACK_PARTIAL) {
+            rgb.setColorAndSync(i, 0, 0, 255, state);
+        } else {
+            rgb.setColorAndSync(i, 0, 255, 0, state);
+        }
+    }
 }
 
 void RackFSM::update(SystemState &state) {
@@ -58,18 +73,24 @@ void RackFSM::update(SystemState &state) {
         state.floors[i].item_count = itemCount;
         totalItems += itemCount;
         // Logika 3 Status Warna per Rak (Instant evaluation):
-        // 0 sisi deteksi = Kosong          -> HIJAU (0, 255, 0)
+        // 0 sisi deteksi = Kosong          -> MERAH (255, 0, 0)
         // 1 sisi deteksi = Terisi Sebagian -> BIRU  (0, 0, 255)
-        // 2 sisi deteksi = Terisi Penuh    -> MERAH (255, 0, 0)
+        // 2 sisi deteksi = Terisi Penuh    -> HIJAU (0, 255, 0)
         if (detectedSides == 0) {
             state.floors[i].rack_state = STATE_RACK_EMPTY;
-            rgb.setColorAndSync(i, 0, 255, 0, state);
+            if (!state.hazard_detected) {
+                rgb.setColorAndSync(i, 255, 0, 0, state);
+            }
         } else if (detectedSides == 1) {
             state.floors[i].rack_state = STATE_RACK_PARTIAL;
-            rgb.setColorAndSync(i, 0, 0, 255, state);
+            if (!state.hazard_detected) {
+                rgb.setColorAndSync(i, 0, 0, 255, state);
+            }
         } else {
             state.floors[i].rack_state = STATE_RACK_FULL;
-            rgb.setColorAndSync(i, 255, 0, 0, state);
+            if (!state.hazard_detected) {
+                rgb.setColorAndSync(i, 0, 255, 0, state);
+            }
         }
     }
 
