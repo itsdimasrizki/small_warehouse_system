@@ -49,11 +49,11 @@ float UltrasonicArray::readDirect(uint8_t sensorIndex) {
 const char* UltrasonicArray::getSensorName(uint8_t sensorIndex) const {
     switch (sensorIndex) {
         case 0: return "Lantai 1 - Kiri  (TRIG 27, ECHO 35)";
-        case 1: return "Lantai 1 - Kanan (TRIG 27, ECHO 34)";
+        case 1: return "Lantai 1 - Kanan (TRIG 13, ECHO 34)";
         case 2: return "Lantai 2 - Kiri  (TRIG 27, ECHO 33)";
-        case 3: return "Lantai 2 - Kanan (TRIG 27, ECHO 32)";
+        case 3: return "Lantai 2 - Kanan (TRIG 13, ECHO 32)";
         case 4: return "Lantai 3 - Kiri  (TRIG 27, ECHO 26)";
-        case 5: return "Lantai 3 - Kanan (TRIG 27, ECHO 25)";
+        case 5: return "Lantai 3 - Kanan (TRIG 13, ECHO 25)";
         default: return "Sensor Tidak Dikenal";
     }
 }

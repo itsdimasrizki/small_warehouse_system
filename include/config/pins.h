@@ -3,19 +3,19 @@
 // Floor 1 UK T20 P48
 #define PIN_TRIG_F1_LEFT    27
 #define PIN_ECHO_F1_LEFT    35
-#define PIN_TRIG_F1_RIGHT   27
+#define PIN_TRIG_F1_RIGHT   13
 #define PIN_ECHO_F1_RIGHT   34
 
 // Floor 2 UK T20 P48
 #define PIN_TRIG_F2_LEFT    27
 #define PIN_ECHO_F2_LEFT    33
-#define PIN_TRIG_F2_RIGHT   27
+#define PIN_TRIG_F2_RIGHT   13
 #define PIN_ECHO_F2_RIGHT   32
 
 // Floor 3 UK T25 P48
 #define PIN_TRIG_F3_LEFT    27
 #define PIN_ECHO_F3_LEFT    26
-#define PIN_TRIG_F3_RIGHT   27
+#define PIN_TRIG_F3_RIGHT   13
 #define PIN_ECHO_F3_RIGHT   25
 
 // DHT11 

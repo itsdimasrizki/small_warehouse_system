@@ -4,15 +4,15 @@
 #define MAX_DISTANCE 200
 
 // Mapping Pin Ultrasonic ESP32
-const uint8_t TRIG_PINS[6] = {27, 27, 27, 27, 27, 27};
+const uint8_t TRIG_PINS[6] = {27, 13, 27, 13, 27, 13};
 const uint8_t ECHO_PINS[6] = {35, 34, 33, 32, 26, 25};
 const char* SENSOR_NAMES[6] = {
     "Lantai 1 - Kiri  (Trig: 27, Echo: 35)",
-    "Lantai 1 - Kanan (Trig: 27, Echo: 34)",
+    "Lantai 1 - Kanan (Trig: 13, Echo: 34)",
     "Lantai 2 - Kiri  (Trig: 27, Echo: 33)",
-    "Lantai 2 - Kanan (Trig: 27, Echo: 32)",
+    "Lantai 2 - Kanan (Trig: 13, Echo: 32)",
     "Lantai 3 - Kiri  (Trig: 27, Echo: 26)",
-    "Lantai 3 - Kanan (Trig: 27, Echo: 25)"
+    "Lantai 3 - Kanan (Trig: 13, Echo: 25)"
 };
 
 NewPing sonars[6] = {
