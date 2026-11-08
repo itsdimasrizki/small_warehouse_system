@@ -11,8 +11,6 @@ public:
     WifiPortal();
 
     // Memulai proses Wi-Fi:
-    // Coba hubungkan ke kredensial tersimpan selama timeoutSec detik.
-    // Jika gagal / belum ada, otomatis aktifkan SoftAP Captive Portal.
     bool begin(uint8_t timeoutSec = 15);
 
     // Pemeliharaan loop server Captive Portal (wajib dipanggil di loop main.cpp)

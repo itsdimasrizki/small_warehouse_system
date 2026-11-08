@@ -5,14 +5,6 @@
 #include "soc/rtc_cntl_reg.h"
 #include "config/pins.h"
 
-// ============================================================================
-// ESP32 SLAVE FIRMWARE: DEDICATED ULTRASONIC ARRAY SCANNER
-// Membaca 6x HC-SR04 (Lantai 1, 2, 3 - Kiri & Kanan) dengan GPIO independen.
-// Memisahkan penembakan KIRI dan KANAN dengan delay akustik untuk mencegah crosstalk.
-// Menembakkan ketiga lantai (L1, L2, L3) secara simultan per sisi.
-// Mengirimkan hasil jarak via UART Hardware Serial (Serial2) ke ESP32 Master.
-// ============================================================================
-
 // Timeout ultrasonik: 30 ms (~514 cm, jauh melampaui lebar rak 48 cm)
 static const unsigned long ULTRASONIC_TIMEOUT_MS   = 30;
 // Jeda antar sisi (Kiri <-> Kanan) agar gelombang pantulan akustik benar-benar reda

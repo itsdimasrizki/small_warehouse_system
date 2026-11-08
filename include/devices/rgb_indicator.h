@@ -16,7 +16,6 @@ public:
     // Default true untuk Common Anode (+)
     RgbIndicator(bool commonAnode = true);
 
-    // Inisialisasi seluruh pin PWM 3x LED RGB
     void begin();
 
     // Atur warna 1 rak tertentu (floorIndex: 0 = Rak 1, 1 = Rak 2, 2 = Rak 3)

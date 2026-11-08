@@ -38,8 +38,7 @@ void RackFSM::update(SystemState &state) {
         // Filter Crosstalk Akustik Langsung:
         // Jika kedua sensor saling tembak langsung saat rak kosong (pin TRIG sama),
         // gelombang satu arah menghasilkan pembacaan simetris di sekitar rackLength / 2.
-        bool isDirectCrosstalk = (dL >= (rackLength / 2.0f - 4.0f) && dL <= (rackLength / 2.0f + 4.0f)) &&
-                                 (dR >= (rackLength / 2.0f - 4.0f) && dR <= (rackLength / 2.0f + 4.0f));
+        bool isDirectCrosstalk = (dL >= (rackLength / 2.0f - 4.0f) && dL <= (rackLength / 2.0f + 4.0f)) && (dR >= (rackLength / 2.0f - 4.0f) && dR <= (rackLength / 2.0f + 4.0f));
 
         bool leftDetected  = (dL > 0.0f && dL < currentThreshold && !isDirectCrosstalk);
         bool rightDetected = (dR > 0.0f && dR < currentThreshold && !isDirectCrosstalk);

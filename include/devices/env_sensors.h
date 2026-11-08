@@ -8,15 +8,11 @@
 class EnvSensors {
 public:
     EnvSensors();
-
-    // Inisialisasi pin dan sensor DHT11
     void begin();
 
     // Membaca suhu, kelembapan, dan ADC asap MQ2, lalu mengupdate SystemState
-    // Mengembalikan true jika pembacaan DHT11 berhasil (bukan NaN)
     bool readSensors(SystemState &state);
 
-    // Pembacaan langsung untuk testing
     float readTemperature();
     float readHumidity();
     int readSmokeRaw();

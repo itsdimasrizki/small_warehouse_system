@@ -116,7 +116,6 @@ void loop() {
     // 1. Baca stream data jarak ultrasonik dari ESP Slave via UART Serial2
     handleSlaveUart();
 
-    // Cek timeout status koneksi UART Slave (3 detik tanpa paket)
     // if (slaveConnected && (currentMillis - lastSlavePacketMs > 3000)) {
     //     slaveConnected = false;
     //     Serial.println("\n[PERINGATAN UART] Kehilangan komunikasi dengan ESP32 Slave (>3 detik)!\n");

@@ -16,13 +16,10 @@ class MqttManager {
 public:
     // Konstruktor menerima referensi SafetyFSM dan opsional pointer ke WifiPortal
     explicit MqttManager(SafetyFSM &safetyFsm, WifiPortal* wifiPortal = nullptr);
-    // Inisialisasi Wi-Fi dan MQTT client
     void begin();
 
-    // Pemeliharaan loop non-blocking (wajib dipanggil setiap siklus loop di main.cpp)
     void loop();
 
-    // Mengemas dan mem-publish data telemetri ke topik MQTT dalam format JSON
     bool publishTelemetry(const SystemState &state);
 
     // Status konektivitas
