@@ -14,3 +14,8 @@
 // Topik MQTT
 #define TOPIC_TELEMETRY     "warehouse/small_warehouse/telemetry"
 #define TOPIC_BUZZER_CTRL   "warehouse/small_warehouse/control/buzzer"
+#define TOPIC_OTA_UPDATE    "warehouse/small_warehouse/ota/update"
+#define TOPIC_OTA_STATUS    "warehouse/small_warehouse/ota/status"
+
+// Versi Firmware Aktif
+#define FIRMWARE_VERSION    "1.0.0"

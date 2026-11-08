@@ -11,16 +11,24 @@
 #include "fsm/rack_fsm.h"
 
 class WifiPortal;
+class OtaManager;
 
 class MqttManager {
 public:
-    // Konstruktor menerima referensi SafetyFSM dan opsional pointer ke WifiPortal
-    explicit MqttManager(SafetyFSM &safetyFsm, WifiPortal* wifiPortal = nullptr);
+    // Konstruktor menerima referensi SafetyFSM, opsional WifiPortal dan OtaManager
+    explicit MqttManager(SafetyFSM &safetyFsm, WifiPortal* wifiPortal = nullptr, OtaManager* otaManager = nullptr);
+    // Inisialisasi Wi-Fi dan MQTT client
     void begin();
 
     void loop();
 
     bool publishTelemetry(const SystemState &state);
+
+    // Mem-publish status OTA ke topik status
+    bool publishOtaStatus(const char* status, int progress, const char* message);
+
+    // Set / update OtaManager instance
+    void setOtaManager(OtaManager* otaManager) { ota = otaManager; }
 
     // Status konektivitas
     bool isConnected();
@@ -30,6 +38,7 @@ public:
 private:
     SafetyFSM &safety;
     WifiPortal* portal;
+    OtaManager* ota;
     WiFiClientSecure espClient;
     PubSubClient mqttClient;
     unsigned long lastReconnectAttempt;
