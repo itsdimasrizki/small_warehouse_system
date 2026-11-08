@@ -2,17 +2,17 @@
 
 // ==============================================================================
 // Disesuaikan dengan ukuran fisik aktual rak:
-// Lantai 1: Tinggi (T) = 20 cm, Panjang (P) = 48 cm
-// Lantai 2: Tinggi (T) = 20 cm, Panjang (P) = 48 cm
-// Lantai 3: Tinggi (T) = 25 cm, Panjang (P) = 48 cm
+// Lantai 1: Tinggi (T) = 20 cm, Panjang (P) = 58 cm
+// Lantai 2: Tinggi (T) = 20 cm, Panjang (P) = 58 cm
+// Lantai 3: Tinggi (T) = 25 cm, Panjang (P) = 58 cm
 // ==============================================================================
-#define RACK1_LENGTH_CM             48.0f   
+#define RACK1_LENGTH_CM             58.0f   
 #define RACK1_HEIGHT_CM             20.0f  
 
-#define RACK2_LENGTH_CM             48.0f   
+#define RACK2_LENGTH_CM             58.0f   
 #define RACK2_HEIGHT_CM             20.0f   
 
-#define RACK3_LENGTH_CM             48.0f   
+#define RACK3_LENGTH_CM             58.0f   
 #define RACK3_HEIGHT_CM             25.0f   
 
 // Batas Deteksi Kapasitas Rak per Lantai (cm)
