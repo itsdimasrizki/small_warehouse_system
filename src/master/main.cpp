@@ -13,8 +13,7 @@
 #include "fsm/safety_fsm.h"
 #include "network/wifi_portal.h"
 #include "network/mqtt_manager.h"
-
-// ============================================================================
+#include "network/ota_manager.h"
 // ESP32 MASTER FIRMWARE: IOT CONTROLLER, FSM MANAGER & ACTUATOR DRIVER
 // Tugas:
 // 1. Menerima data jarak 6 sensor ultrasonik dari ESP32 Slave via UART (Serial2).
@@ -33,8 +32,8 @@ AlarmBuzzer buzzer;
 RackFSM rackFsm(rgbIndicator);
 SafetyFSM safetyFsm(buzzer, &rgbIndicator);
 WifiPortal wifiPortal;
-MqttManager mqttManager(safetyFsm, &wifiPortal);
-
+OtaManager otaManager;
+MqttManager mqttManager(safetyFsm, &wifiPortal, &otaManager);
 // State Global Sistem
 SystemState systemState;
 
@@ -99,8 +98,10 @@ void setup() {
     safetyFsm.begin(&systemState);
     wifiPortal.begin(15);
     mqttManager.begin();
-
-    Serial.println("[INFO] Inisialisasi driver selesai. Menjalankan Self-Test Aktuator...");
+    otaManager.begin("esp32-warehouse-master");
+    otaManager.setStatusCallback([](const char* status, int progress, const char* msg) {
+        mqttManager.publishOtaStatus(status, progress, msg);
+    });
     runStartupSelfTest();
 
     Serial.println("\n[SIAP] ESP32 Master siap menerima stream ultrasonik dari Slave dan mengelola IoT!");
@@ -113,7 +114,14 @@ void loop() {
     // 0. Layani Web Server Captive Portal jika mode AP sedang aktif
     wifiPortal.loop();
 
-    // 1. Baca stream data jarak ultrasonik dari ESP Slave via UART Serial2
+    // 0.1 Layani ArduinoOTA (LAN Flashing)
+    otaManager.loop();
+
+    // Jika sedang dalam proses burning flash OTA, hentikan loop lain untuk stabilitas
+    if (otaManager.isUpdating()) {
+        delay(10);
+        return;
+    }
     handleSlaveUart();
 
     // Cek timeout status koneksi UART Slave (3 detik tanpa paket)
@@ -329,7 +337,8 @@ void printDashboard() {
     }
     Serial.printf("   * Topik Telemetri  : %s\n", TOPIC_TELEMETRY);
     Serial.printf("   * Topik Kontrol    : %s\n", TOPIC_BUZZER_CTRL);
-    Serial.println("------------------------------------------------------------------\n\n");
+    Serial.printf("   * Topik OTA Update : %s\n", TOPIC_OTA_UPDATE);
+    Serial.printf("   * Versi Firmware   : %s\n", FIRMWARE_VERSION);
 }
 
 void handleSerialCommands() {
@@ -439,8 +448,18 @@ void handleSerialCommands() {
             Serial.println("  'AUTO'/'a' : FSM Safety - Kembalikan ke mode evaluasi otomatis");
             Serial.println("  'w'        : Buka SoftAP Captive Portal Konfigurasi Wi-Fi");
             Serial.println("  'k'        : Reset kredensial Wi-Fi NVS ke default");
+            Serial.println("  'v'        : Tampilkan versi firmware & status OTA");
             Serial.println("  'h'        : Tampilkan menu bantuan ini");
             Serial.println("--------------------------------------------");
+            break;
+
+        case 'v':
+        case 'V':
+            Serial.println("\n[INFO FIRMWARE & OTA]:");
+            Serial.printf("   * Versi Aktif     : %s\n", FIRMWARE_VERSION);
+            Serial.printf("   * Partisi Flash   : min_spiffs (OTA Ready ~1.9MB per slot)\n");
+            Serial.printf("   * Topik OTA Update: %s\n", TOPIC_OTA_UPDATE);
+            Serial.printf("   * Topik OTA Status: %s\n", TOPIC_OTA_STATUS);
             break;
 
         default:
