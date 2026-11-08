@@ -41,9 +41,8 @@
 // ============================================================================
 
 // UART Komunikasi ke Master (Serial2)
-#define PIN_SLAVE_UART_TX     17  // Terhubung ke RX Master (GPIO 16)
-#define PIN_SLAVE_UART_RX     16  // Terhubung ke TX Master (GPIO 17)
-
+#define PIN_SLAVE_UART_TX     17  // Terhubung ke RX Master (GPIO 26)
+#define PIN_SLAVE_UART_RX     16  // Terhubung ke TX Master (GPIO 27)
 // Lantai 1 (T20 P48) - HC-SR04 Kiri & Kanan
 #define PIN_SLAVE_TRIG_F1_L   14
 #define PIN_SLAVE_ECHO_F1_L   35  // Pin VP (Input only)

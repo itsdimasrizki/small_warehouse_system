@@ -48,6 +48,8 @@ static char slaveBuffer[256];
 static size_t slaveBufferIndex = 0;
 static unsigned long lastSlavePacketMs = 0;
 static unsigned long slavePacketCount = 0;
+static unsigned long rawBytesCount = 0;
+static unsigned long parseErrorCount = 0;
 static bool slaveConnected = false;
 
 bool isCommonAnode = true;
@@ -162,6 +164,7 @@ void loop() {
 void handleSlaveUart() {
     while (Serial2.available()) {
         char c = (char)Serial2.read();
+        rawBytesCount++;
         if (c == '\n') {
             slaveBuffer[slaveBufferIndex] = '\0';
             if (slaveBufferIndex > 0) {
@@ -178,6 +181,7 @@ void parseSlavePacket(const char* json) {
     JsonDocument doc;
     DeserializationError error = deserializeJson(doc, json);
     if (error) {
+        parseErrorCount++;
         return; // Abaikan baris rusak
     }
 
@@ -228,12 +232,22 @@ void printDashboard() {
 
     // 0. Status UART ESP Slave
     Serial.println("0. Status Komunikasi UART ESP Slave:");
+    Serial.printf("   * Pin Konfigurasi : RX Master=GPIO %d | TX Master=GPIO %d\n",
+                  PIN_MASTER_UART_RX, PIN_MASTER_UART_TX);
+    Serial.printf("   * Raw Bytes Masuk : %lu byte\n", rawBytesCount);
+    Serial.printf("   * Paket Valid     : %lu paket (Error Parse: %lu)\n", slavePacketCount, parseErrorCount);
     if (slaveConnected) {
-        Serial.printf("   * Link UART       : TERHUBUNG / AKTIF (Paket: #%lu, delay: %lu ms)\n",
-                      slavePacketCount, millis() - lastSlavePacketMs);
+        Serial.printf("   * Status Link     : TERHUBUNG / AKTIF (delay: %lu ms)\n", millis() - lastSlavePacketMs);
     } else {
-        Serial.printf("   * Link UART       : MENUNGGU DATA SLAVE (RX: GPIO %d, TX: GPIO %d)\n",
-                      PIN_MASTER_UART_RX, PIN_MASTER_UART_TX);
+        Serial.println("   * Status Link     : MENUNGGU DATA SLAVE / TIMEOUT");
+        if (rawBytesCount == 0) {
+            Serial.println("     [PANDUAN KABEL]:");
+            Serial.printf("     1. Sambungkan TX Slave (GPIO %d) -> RX Master (GPIO %d)\n",
+                          PIN_SLAVE_UART_TX, PIN_MASTER_UART_RX);
+            Serial.printf("     2. Sambungkan RX Slave (GPIO %d) <- TX Master (GPIO %d)\n",
+                          PIN_SLAVE_UART_RX, PIN_MASTER_UART_TX);
+            Serial.println("     3. Sambungkan GND Slave <-> GND Master (WAJIB Common Ground)!");
+        }
     }
 
     // 1. Data Jarak 6 Sensor Ultrasonik (dari Slave) & FSM Rak

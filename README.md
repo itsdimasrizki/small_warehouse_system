@@ -28,31 +28,30 @@ Proyek ini menggunakan arsitektur **Dual ESP32 (Master & Slave)** yang terhubung
 ### 1. Interkoneksi UART (Master <--> Slave)
 | ESP32 Master | ESP32 Slave | Keterangan |
 | :--- | :--- | :--- |
-| **GPIO 16 (RX2)** | **GPIO 17 (TX2)** | Jalur Data Slave -> Master |
-| **GPIO 17 (TX2)** | **GPIO 16 (RX2)** | Jalur Perintah Master -> Slave |
-| **GND** | **GND** | Wajib Terhubung (*Common Ground*) |
+| **GPIO 26 (RX)** | **GPIO 17 (TX)** | Jalur Data Slave -> Master (WAJIB COCOK) |
+| **GPIO 27 (TX)** | **GPIO 16 (RX)** | Jalur Perintah Master -> Slave |
+| **GND** | **GND** | **Wajib Terhubung (*Common Ground*)** |
 
 ### 2. Pinout ESP32 Slave (Sensor Ultrasonik HC-SR04)
 | Komponen | Pin Modul | Pin ESP32 Slave | Tipe I/O |
 | :--- | :--- | :--- | :--- |
-| **Ultrasonik Lantai 1 Kiri** | TRIG / ECHO | `GPIO 13` / `GPIO 36` (VP) | Output / Input |
-| **Ultrasonik Lantai 1 Kanan** | TRIG / ECHO | `GPIO 14` / `GPIO 39` (VN) | Output / Input |
-| **Ultrasonik Lantai 2 Kiri** | TRIG / ECHO | `GPIO 27` / `GPIO 34` | Output / Input |
-| **Ultrasonik Lantai 2 Kanan** | TRIG / ECHO | `GPIO 26` / `GPIO 35` | Output / Input |
-| **Ultrasonik Lantai 3 Kiri** | TRIG / ECHO | `GPIO 25` / `GPIO 32` | Output / Input |
-| **Ultrasonik Lantai 3 Kanan** | TRIG / ECHO | `GPIO 33` / `GPIO 23` | Output / Input |
+| **Ultrasonik Lantai 1 Kiri** | TRIG / ECHO | `GPIO 14` / `GPIO 35` | Output / Input |
+| **Ultrasonik Lantai 1 Kanan** | TRIG / ECHO | `GPIO 27` / `GPIO 34` | Output / Input |
+| **Ultrasonik Lantai 2 Kiri** | TRIG / ECHO | `GPIO 4` / `GPIO 33`  | Output / Input |
+| **Ultrasonik Lantai 2 Kanan** | TRIG / ECHO | `GPIO 13` / `GPIO 32` | Output / Input |
+| **Ultrasonik Lantai 3 Kiri** | TRIG / ECHO | `GPIO 18` / `GPIO 26` | Output / Input |
+| **Ultrasonik Lantai 3 Kanan** | TRIG / ECHO | `GPIO 5` / `GPIO 25`  | Output / Input |
 
 ### 3. Pinout ESP32 Master (Sensor Lingkungan, Aktuator & IoT)
 | Komponen | Pin Modul | Pin ESP32 Master | Tipe I/O | Keterangan |
 | :--- | :--- | :--- | :--- | :--- |
 | **Sensor Suhu DHT11** | DATA | `GPIO 4` | Digital I/O | Resistor pull-up 10k ke 3.3V |
 | **Sensor Asap MQ2** | A0 (Analog) | `GPIO 36` (VP) | Analog Input | ADC1 (Aman dengan Wi-Fi) |
-| **Active Buzzer** | Positif (+) | `GPIO 15` | Digital Output | Active High |
+| **Active Buzzer** | Positif (+) | `GPIO 13` | Digital Output | Active High |
 | **LED RGB Rak 1 (Lantai 1)** | R / G / B | `GPIO 23` / `22` / `21` | Digital Output | Resistor 220 Ohm (Common Anode) |
 | **LED RGB Rak 2 (Lantai 2)** | R / G / B | `GPIO 19` / `18` / `5`  | Digital Output | Resistor 220 Ohm (Common Anode) |
-| **LED RGB Rak 3 (Lantai 3)** | R / G / B | `GPIO 27` / `26` / `25` | Digital Output | Resistor 220 Ohm (Common Anode) |
+| **LED RGB Rak 3 (Lantai 3)** | R / G / B | `GPIO 17` / `16` / `14` | Digital Output | Resistor 220 Ohm (Common Anode) |
 ---
-
 ## 📁 Struktur Direktori Proyek
 
 ```text
