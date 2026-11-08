@@ -117,10 +117,10 @@ void loop() {
     handleSlaveUart();
 
     // Cek timeout status koneksi UART Slave (3 detik tanpa paket)
-    if (slaveConnected && (currentMillis - lastSlavePacketMs > 3000)) {
-        slaveConnected = false;
-        Serial.println("\n[PERINGATAN UART] Kehilangan komunikasi dengan ESP32 Slave (>3 detik)!\n");
-    }
+    // if (slaveConnected && (currentMillis - lastSlavePacketMs > 3000)) {
+    //     slaveConnected = false;
+    //     Serial.println("\n[PERINGATAN UART] Kehilangan komunikasi dengan ESP32 Slave (>3 detik)!\n");
+    // }
 
     // 2. Pembacaan Sensor Lingkungan (DHT11 & MQ2) setiap 2 detik
     if (currentMillis - lastEnvRead >= INTERVAL_ENV_READ_MS) {

@@ -44,22 +44,22 @@
 #define PIN_SLAVE_UART_TX     17  // Terhubung ke RX Master (GPIO 26)
 #define PIN_SLAVE_UART_RX     16  // Terhubung ke TX Master (GPIO 27)
 // Lantai 1 (T20 P48) - HC-SR04 Kiri & Kanan
-#define PIN_SLAVE_TRIG_F1_L   14
-#define PIN_SLAVE_ECHO_F1_L   35  // Pin VP (Input only)
-#define PIN_SLAVE_TRIG_F1_R   27
-#define PIN_SLAVE_ECHO_F1_R   34  // Pin VN (Input only)
+#define PIN_SLAVE_TRIG_F1_L   27
+#define PIN_SLAVE_ECHO_F1_L   34// Pin VP (Input only)
+#define PIN_SLAVE_TRIG_F1_R   14
+#define PIN_SLAVE_ECHO_F1_R   35  // Pin VN (Input only)
 
 // Lantai 2 (T20 P48) - HC-SR04 Kiri & Kanan
-#define PIN_SLAVE_TRIG_F2_L   4
-#define PIN_SLAVE_ECHO_F2_L   33  // Pin Input only
-#define PIN_SLAVE_TRIG_F2_R   13
-#define PIN_SLAVE_ECHO_F2_R   32  // Pin Input only
+#define PIN_SLAVE_TRIG_F2_L   13
+#define PIN_SLAVE_ECHO_F2_L   32  // Pin Input only
+#define PIN_SLAVE_TRIG_F2_R   4
+#define PIN_SLAVE_ECHO_F2_R   33  // Pin Input only
 
 // Lantai 3 (T25 P48) - HC-SR04 Kiri & Kanan
-#define PIN_SLAVE_TRIG_F3_L   18
-#define PIN_SLAVE_ECHO_F3_L   26  // Digital I/O
-#define PIN_SLAVE_TRIG_F3_R   5
-#define PIN_SLAVE_ECHO_F3_R   25  // Digital I/O
+#define PIN_SLAVE_TRIG_F3_L   5
+#define PIN_SLAVE_ECHO_F3_L   25  // Digital I/O
+#define PIN_SLAVE_TRIG_F3_R   18
+#define PIN_SLAVE_ECHO_F3_R   26  // Digital I/O
 
 // Backward Compatibility Alias
 #define PIN_TRIG_F1_LEFT      PIN_SLAVE_TRIG_F1_L
