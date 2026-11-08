@@ -56,7 +56,8 @@ bool WifiPortal::begin(uint8_t timeoutSec) {
     if (storedSSID.length() > 0 && storedSSID != "YOUR_WIFI_SSID") {
         Serial.printf("[WIFI] Mencoba koneksi ke SSID tersimpan: '%s' (Batas waktu: %d detik)...\n",
                       storedSSID.c_str(), timeoutSec);
-
+        WiFi.persistent(false);
+        WiFi.setAutoReconnect(false);
         WiFi.mode(WIFI_STA);
         WiFi.setTxPower(WIFI_POWER_11dBm);
         WiFi.begin(storedSSID.c_str(), storedPass.c_str());
@@ -76,6 +77,9 @@ bool WifiPortal::begin(uint8_t timeoutSec) {
             return true;
         } else {
             Serial.println("\n[WIFI] Gagal terhubung ke Wi-Fi tersimpan (Timeout / Sandi Salah / Router Mati).");
+            // Bersihkan koneksi STA agar tidak ada background reconnect & channel hopping saat portal dibuka
+            WiFi.disconnect(true, true);
+            delay(100);
         }
     } else {
         Serial.println("[WIFI] Mode Non-Hardcode: Belum ada kredensial Wi-Fi tersimpan di NVS Flash.");
@@ -86,25 +90,32 @@ bool WifiPortal::begin(uint8_t timeoutSec) {
     startPortal();
     return false;
 }
-
 void WifiPortal::startPortal() {
+    if (portalActive) {
+        stopPortal();
+    }
     portalActive = true;
 
-    WiFi.disconnect();
+    // 1. Putuskan dan nonaktifkan STA sepenuhnya agar radio tidak melakukan background reconnect
+    WiFi.setAutoReconnect(false);
+    WiFi.disconnect(true, true);
     delay(100);
-    WiFi.mode(WIFI_AP_STA); // Mode AP + STA agar bisa scan jaringan sekitar sambil menyajikan AP
+
+    // 2. Set mode ke WIFI_AP (Dedicated SoftAP agar radio terkunci di Channel 1 tanpa channel-hopping)
+    WiFi.mode(WIFI_AP);
+    delay(100);
 
     char apName[32];
     uint16_t chipId = (uint16_t)(ESP.getEfuseMac() & 0xFFFF);
     snprintf(apName, sizeof(apName), "Warehouse-Rak-%04X", chipId);
 
-    WiFi.softAPConfig(apIP, apIP, netMask);
+    // 3. Konfigurasi SoftAP IP & pastikan DNS server (apIP) disebarkan oleh DHCP server ke klien HP via Option 6
+    WiFi.softAPConfig(apIP, apIP, netMask, IPAddress(192, 168, 4, 2), apIP);
     bool apSuccess = WiFi.softAP(apName);
     if (!apSuccess) {
-        Serial.println("[WARN] Gagal menyalakan SoftAP di mode AP_STA, mencoba mode WIFI_AP...");
-        WiFi.mode(WIFI_AP);
+        Serial.println("[WARN] Gagal menyalakan SoftAP, mencoba inisialisasi ulang...");
         delay(100);
-        WiFi.softAPConfig(apIP, apIP, netMask);
+        WiFi.softAPConfig(apIP, apIP, netMask, IPAddress(192, 168, 4, 2), apIP);
         apSuccess = WiFi.softAP(apName);
     }
     WiFi.setTxPower(WIFI_POWER_11dBm);
@@ -115,15 +126,20 @@ void WifiPortal::startPortal() {
     Serial.printf(" * Alamat Web Portal : http://%s/\n", apIP.toString().c_str());
     Serial.println("--------------------------------------------------");
 
-    // DNS Server untuk mengarahkan seluruh domain (Captive Portal Redirect) ke IP ESP32
+    // 4. DNS Server untuk mengarahkan seluruh domain (Captive Portal Redirect) ke IP ESP32
+    dnsServer.stop();
     dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
-    dnsServer.start(53, "*", apIP);
+    if (dnsServer.start(53, "*", apIP)) {
+        Serial.println("[DNS SERVER] DNS Server Captive Portal aktif di Port 53.");
+    } else {
+        Serial.println("[WARN] DNS Server gagal mengikat port 53!");
+    }
 
+    // 5. Inisialisasi Web Server
     setupWebServer();
     server.begin();
     Serial.println("[HTTP SERVER] Web Server Captive Portal telah aktif di Port 80.");
 }
-
 void WifiPortal::stopPortal() {
     if (portalActive) {
         dnsServer.stop();
@@ -142,6 +158,10 @@ void WifiPortal::loop() {
 }
 
 void WifiPortal::setupWebServer() {
+    static bool routesConfigured = false;
+    if (routesConfigured) return;
+    routesConfigured = true;
+
     server.on("/", HTTP_GET, [this]() { handleRoot(); });
     server.on("/save", HTTP_POST, [this]() { handleSave(); });
     server.on("/scan", HTTP_GET, [this]() { handleScan(); });
@@ -173,9 +193,9 @@ void WifiPortal::handleScan() {
         json += "\"secure\":" + String((WiFi.encryptionType(i) == WIFI_AUTH_OPEN) ? "false" : "true") + "}";
     }
     json += "]";
+    WiFi.scanDelete();
     server.send(200, "application/json", json);
 }
-
 void WifiPortal::handleRestart() {
     server.send(200, "text/html", "<html><body><h3>Memulai Ulang Perangkat...</h3></body></html>");
     delay(1000);
