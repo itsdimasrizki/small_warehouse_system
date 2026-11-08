@@ -1,59 +1,56 @@
 # Small Warehouse Monitoring & Safety System (IoT)
 
-Sistem pemantauan kapasitas rak gudang 3 lantai berbasis IoT secara *real-time* dan sistem proteksi dini keselamatan gudang terhadap risiko kebakaran atau suhu berlebih. Dibangun menggunakan mikrokontroler **NodeMCU ESP32** dengan framework **Arduino** pada environment **PlatformIO**.
+Sistem pemantauan kapasitas rak gudang 3 lantai berbasis IoT secara *real-time* dan sistem proteksi dini keselamatan gudang terhadap risiko kebakaran atau suhu berlebih. 
+
+Proyek ini menggunakan arsitektur **Dual ESP32 (Master & Slave)** yang terhubung melalui komunikasi **UART Hardware Serial (Serial2)** untuk menjamin performa maksimal tanpa perebutan sumber daya atau pin I/O.
 
 ---
 
-## 📋 Daftar Isi
-1. [Fitur Utama](#-fitur-utama)
-2. [Spesifikasi Perangkat Keras & Pinout](#-spesifikasi-perangkat-keras--pinout)
-3. [Struktur Direktori Proyek](#-struktur-direktori-proyek)
-4. [Panduan Command PlatformIO (Lengkap)](#-panduan-command-platformio-lengkap)
-5. [Program Pengujian Sensor (Bring-Up & Diagnostics)](#-program-pengujian-sensor-bring-up--diagnostics)
-6. [Sketch Pengujian Mandiri (Examples)](#-sketch-pengujian-mandiri-examples)
-7. [Troubleshooting & Solusi Masalah Hardware](#-troubleshooting--solusi-masalah-hardware)
+## 📋 Arsitektur Sistem Dual ESP32
+
+1. **ESP32 SLAVE (Dedicated Ultrasonic Array Reader):**
+   * Mengontrol penuh 6 sensor ultrasonik HC-SR04 (Lantai 1, 2, 3 - Kiri & Kanan) dengan 12 pin GPIO independen (tidak ada lagi pin sharing).
+   * **Anti-Crosstalk Polling:** Menggunakan delay transisi antara sisi KIRI dan KANAN sehingga gelombang pantulan akustik reda sepenuhnya.
+   * **Simultaneous Vertical Ping:** Menembakkan ketiga sensor ultrasonik secara bersamaan untuk sisi yang aktif (Lantai 1, 2, dan 3 serentak), diukur presisi via GPIO Interrupts (`IRAM_ATTR`).
+   * Mengirimkan paket data jarak 6 sensor berformat JSON ke Master melalui UART Serial2 (`115200` baud).
+
+2. **ESP32 MASTER (Warehouse Controller & IoT Gateway):**
+   * Menerima stream jarak sensor dari Slave via UART Serial2.
+   * Menjalankan **RackFSM** untuk menghitung estimasi jumlah barang, rentang terisi, serta mengontrol **3x LED RGB** indikator rak (Hijau = Kosong, Biru = Terisi Sebagian, Merah = Penuh).
+   * Membaca sensor lingkungan lokal: Suhu & Kelembapan (**DHT11**) dan Gas/Asap (**MQ-2**).
+   * Menjalankan **SafetyFSM** dan mengontrol **Active Buzzer** alarm saat terjadi bahaya suhu atau gas.
+   * Menghubungkan sistem ke **Wi-Fi** (dengan Captive Web Portal) dan mengirim telemetri serta menerima perintah kendali via **MQTT**.
 
 ---
 
-## 🚀 Fitur Utama
+## 🔌 Diagram Pengkabelan & Pinout Antar ESP
 
-1. **Deteksi Kapasitas Rak Presisi Tinggi:**
-   * Memakai 6 sensor ultrasonik HC-SR04 (2 sensor saling berhadapan di setiap lantai: Kiri & Kanan) untuk meminimalkan *blind spot*.
-   * Menggunakan mekanisme *Sequential Polling Non-Blocking* (jeda $\ge 40\text{ ms}$ antar sensor) untuk mencegah interferensi pantulan (*cross-talk*).
-2. **Indikator Visual Kapasitas per Rak (3x LED RGB Diskret):**
-   * Masing-masing lantai rak dilengkapi 1 LED RGB (total 3 LED untuk 3 Rak):
-     * **HIJAU** (`0, 255, 0`): Rak tersebut kosong (0 sensor mendeteksi barang).
-     * **BIRU** (`0, 0, 255`): Rak terisi sebagian (1 sensor mendeteksi: kiri saja / kanan saja).
-     * **MERAH** (`255, 0, 0`): Rak terisi penuh (kedua sensor kiri & kanan mendeteksi barang).
-   * Konfigurasi perangkat keras: **Common Anode (+)** dengan kaki anoda terhubung ke $3.3\text{V}$ (didukung pula mode Common Cathode).
-3. **Sistem Proteksi Keselamatan Ruangan (Safety Alarm):**
-   * Pemantauan suhu & kelembapan ruangan via DHT11 (Ambang bahaya: $T \ge 38.0^\circ\text{C}$).
-   * Pemantauan kepekatan asap & gas via MQ2 pada jalur **ADC1** (Ambang bahaya: $\text{ADC} \ge 1800$).
-   * Aktuasi Active Buzzer alarm secara otomatis jika bahaya terdeteksi.
+### 1. Interkoneksi UART (Master <--> Slave)
+| ESP32 Master | ESP32 Slave | Keterangan |
+| :--- | :--- | :--- |
+| **GPIO 16 (RX2)** | **GPIO 17 (TX2)** | Jalur Data Slave -> Master |
+| **GPIO 17 (TX2)** | **GPIO 16 (RX2)** | Jalur Perintah Master -> Slave |
+| **GND** | **GND** | Wajib Terhubung (*Common Ground*) |
 
----
+### 2. Pinout ESP32 Slave (Sensor Ultrasonik HC-SR04)
+| Komponen | Pin Modul | Pin ESP32 Slave | Tipe I/O |
+| :--- | :--- | :--- | :--- |
+| **Ultrasonik Lantai 1 Kiri** | TRIG / ECHO | `GPIO 13` / `GPIO 36` (VP) | Output / Input |
+| **Ultrasonik Lantai 1 Kanan** | TRIG / ECHO | `GPIO 14` / `GPIO 39` (VN) | Output / Input |
+| **Ultrasonik Lantai 2 Kiri** | TRIG / ECHO | `GPIO 27` / `GPIO 34` | Output / Input |
+| **Ultrasonik Lantai 2 Kanan** | TRIG / ECHO | `GPIO 26` / `GPIO 35` | Output / Input |
+| **Ultrasonik Lantai 3 Kiri** | TRIG / ECHO | `GPIO 25` / `GPIO 32` | Output / Input |
+| **Ultrasonik Lantai 3 Kanan** | TRIG / ECHO | `GPIO 33` / `GPIO 23` | Output / Input |
 
-## 🔌 Spesifikasi Perangkat Keras & Pinout
-
-> [!IMPORTANT]
-> - **Aturan ADC1 vs Wi-Fi:** Pin `GPIO 34` wajib digunakan untuk MQ2 karena berada di jalur **ADC1**. Jalur ADC2 tidak bisa membaca analog saat Wi-Fi ESP32 aktif.
-> - **Pin Input-Only:** Pin `GPIO 34, 35, 36, 39` adalah pin khusus input (tanpa internal pull-up/pull-down).
-> - **Proteksi Tegangan (Voltage Divider):** Apabila HC-SR04 diberi daya $5\text{V}$, gunakan pembagi tegangan (resistor $1\text{ k}\Omega$ & $2\text{ k}\Omega$) pada pin `ECHO` sebelum masuk ke GPIO ESP32 ($3.3\text{V}$).
-
-| Komponen | Pin Modul | Pin GPIO ESP32 | Tipe I/O | Keterangan |
+### 3. Pinout ESP32 Master (Sensor Lingkungan, Aktuator & IoT)
+| Komponen | Pin Modul | Pin ESP32 Master | Tipe I/O | Keterangan |
 | :--- | :--- | :--- | :--- | :--- |
-| **Ultrasonik Lantai 1 Kiri** | TRIG / ECHO | `GPIO 13` / `GPIO 36` | Output / Input | Pin 36 (VP) Input-Only |
-| **Ultrasonik Lantai 1 Kanan** | TRIG / ECHO | `GPIO 14` / `GPIO 39` | Output / Input | Pin 39 (VN) Input-Only |
-| **Ultrasonik Lantai 2 Kiri** | TRIG / ECHO | `GPIO 27` / `GPIO 35` | Output / Input | Pin 35 Input-Only |
-| **Ultrasonik Lantai 2 Kanan** | TRIG / ECHO | `GPIO 26` / `GPIO 32` | Output / Input | I/O Digital Standar |
-| **Ultrasonik Lantai 3 Kiri** | TRIG / ECHO | `GPIO 25` / `GPIO 33` | Output / Input | I/O Digital Standar |
-| **Ultrasonik Lantai 3 Kanan** | TRIG / ECHO | `GPIO 17` / `GPIO 12` | Output / Input | Pin 12 aman saat boot berkat divider 1k/2k ke GND |
-| **Sensor Suhu DHT11** | DATA | `GPIO 4` | Digital I/O | Wajib pull-up $10\text{ k}\Omega$ ke $3.3\text{V}$ |
-| **Sensor Asap MQ2** | A0 (Analog) | `GPIO 34` | Analog Input | ADC1 Channel 6 |
-| **LED RGB Rak 1 (Lantai 1)** | R / G / B | `GPIO 21` / `22` / `23` | PWM Output | Resistor seri $220\text{ }\Omega$ (Common Anode) |
-| **LED RGB Rak 2 (Lantai 2)** | R / G / B | `GPIO 19` / `16` / `5`  | PWM Output | Resistor seri $220\text{ }\Omega$ (Common Anode) |
-| **LED RGB Rak 3 (Lantai 3)** | R / G / B | `GPIO 15` / `2`  / `0`  | PWM Output | Resistor seri $220\text{ }\Omega$ (Common Anode) |
-| **Active Buzzer** | Positif (+) | `GPIO 18` | Digital Output | Active High ($3.3\text{V}/5\text{V}$) |
+| **Sensor Suhu DHT11** | DATA | `GPIO 4` | Digital I/O | Resistor pull-up 10k ke 3.3V |
+| **Sensor Asap MQ2** | A0 (Analog) | `GPIO 36` (VP) | Analog Input | ADC1 (Aman dengan Wi-Fi) |
+| **Active Buzzer** | Positif (+) | `GPIO 15` | Digital Output | Active High |
+| **LED RGB Rak 1 (Lantai 1)** | R / G / B | `GPIO 23` / `22` / `21` | Digital Output | Resistor 220 Ohm (Common Anode) |
+| **LED RGB Rak 2 (Lantai 2)** | R / G / B | `GPIO 19` / `18` / `5`  | Digital Output | Resistor 220 Ohm (Common Anode) |
+| **LED RGB Rak 3 (Lantai 3)** | R / G / B | `GPIO 27` / `26` / `25` | Digital Output | Resistor 220 Ohm (Common Anode) |
 ---
 
 ## 📁 Struktur Direktori Proyek
@@ -103,18 +100,20 @@ Mengompilasi seluruh kode sumber dan memastikan tidak ada error sintaks atau lib
 pio run
 ```
 
-### 2. Upload Firmware ke ESP32
-Mengompilasi dan mengunggah binary firmware ke board ESP32 yang terhubung:
-```bash
-pio run --target upload
-```
-*Atau versi singkat:*
-```bash
-pio run -t upload
-```
+### 2. Upload Firmware ke ESP32 (Pilih Target Environment)
+Karena proyek ini memiliki 2 board ESP32 (Master & Slave), tentukan environment target saat upload:
+
+* **Upload ke ESP32 Master:**
+  ```bash
+  pio run -e esp32-master -t upload
+  ```
+* **Upload ke ESP32 Slave:**
+  ```bash
+  pio run -e esp32-slave -t upload
+  ```
+*(Jika menggunakan port spesifik: tambahkan flag `--upload-port /dev/ttyUSB0` atau `COM3`)*
 
 ### 3. Membuka Serial Monitor
-Membuka monitor serial untuk membaca log output dan dashboard data:
 ```bash
 pio device monitor -b 115200
 ```

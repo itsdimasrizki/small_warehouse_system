@@ -1,11 +1,11 @@
 #include <Arduino.h>
+#include <ArduinoJson.h>
 #include "esp_private/brownout.h"
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
 #include "config/pins.h"
 #include "config/thresholds.h"
 #include "types/system_state.h"
-#include "devices/ultrasonic_array.h"
 #include "devices/env_sensors.h"
 #include "devices/rgb_indicator.h"
 #include "devices/alarm_buzzer.h"
@@ -13,8 +13,18 @@
 #include "fsm/safety_fsm.h"
 #include "network/wifi_portal.h"
 #include "network/mqtt_manager.h"
+
+// ============================================================================
+// ESP32 MASTER FIRMWARE: IOT CONTROLLER, FSM MANAGER & ACTUATOR DRIVER
+// Tugas:
+// 1. Menerima data jarak 6 sensor ultrasonik dari ESP32 Slave via UART (Serial2).
+// 2. Mengeksekusi RackFSM (penghitungan kapasitas rak & visualisasi 3x LED RGB).
+// 3. Membaca sensor lingkungan (DHT11 & MQ-2).
+// 4. Mengeksekusi SafetyFSM & mengontrol Buzzer alarm serta proteksi bahaya.
+// 5. Mengelola konektivitas Wi-Fi (Captive Portal) dan komunikasi MQTT (telemetri/perintah).
+// ============================================================================
+
 // Inisialisasi Driver Perangkat Keras
-UltrasonicArray ultrasonicArray;
 EnvSensors envSensors;
 RgbIndicator rgbIndicator(true); // Default Common Anode (+)
 AlarmBuzzer buzzer;
@@ -24,35 +34,51 @@ RackFSM rackFsm(rgbIndicator);
 SafetyFSM safetyFsm(buzzer, &rgbIndicator);
 WifiPortal wifiPortal;
 MqttManager mqttManager(safetyFsm, &wifiPortal);
+
 // State Global Sistem
 SystemState systemState;
 
 // Penjadwalan Waktu Non-Blocking (millis)
-unsigned long lastUltrasonicPoll = 0;
 unsigned long lastEnvRead = 0;
 unsigned long lastDashboardPrint = 0;
 unsigned long lastTelemetryPublish = 0;
+
+// Status & Buffer Komunikasi UART Slave
+static char slaveBuffer[256];
+static size_t slaveBufferIndex = 0;
+static unsigned long lastSlavePacketMs = 0;
+static unsigned long slavePacketCount = 0;
+static bool slaveConnected = false;
 
 bool isCommonAnode = true;
 
 void runStartupSelfTest();
 void printDashboard();
 void handleSerialCommands();
+void handleSlaveUart();
+void parseSlavePacket(const char* json);
 
 void setup() {
-    // 1. Nonaktifkan Brownout Detector sesegera mungkin agar lonjakan arus RF Wi-Fi tidak mereset ESP32
+    // 1. Nonaktifkan Brownout Detector agar lonjakan transmisi RF Wi-Fi tidak mereset ESP32
     esp_brownout_disable();
     WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
 
     Serial.begin(115200);
     while (!Serial && millis() < 2000) {
-        ; // Tunggu koneksi Serial Monitor
+        ; // Tunggu koneksi Serial Monitor USB
     }
 
     Serial.println("\n");
-    Serial.println("[INFO] Menginisialisasi seluruh driver sensor, aktuator, dan FSM...");
+    Serial.println("========================================================");
+    Serial.println("  ESP32 MASTER: WAREHOUSE CONTROLLER & FSM INITIALIZING ");
+    Serial.println("========================================================");
 
-    ultrasonicArray.begin();
+    // 2. Inisialisasi UART Serial2 untuk menerima data dari Slave
+    Serial2.begin(115200, SERIAL_8N1, PIN_MASTER_UART_RX, PIN_MASTER_UART_TX);
+    Serial.printf("[INFO] UART Slave diaktifkan: RX=%d, TX=%d @ 115200 baud\n",
+                  PIN_MASTER_UART_RX, PIN_MASTER_UART_TX);
+
+    // 3. Inisialisasi driver aktuator & sensor lokal
     envSensors.begin();
     rgbIndicator.begin();
     buzzer.begin();
@@ -66,15 +92,16 @@ void setup() {
     }
     systemState.safety_state = STATE_SAFE_NORMAL;
 
-    // Inisialisasi FSM
+    // Inisialisasi FSM & Jaringan
     rackFsm.begin();
     safetyFsm.begin(&systemState);
     wifiPortal.begin(15);
     mqttManager.begin();
-    Serial.println("[INFO] Inisialisasi selesai. Menjalankan Self-Test Aktuator...");
+
+    Serial.println("[INFO] Inisialisasi driver selesai. Menjalankan Self-Test Aktuator...");
     runStartupSelfTest();
 
-    Serial.println("\n[SIAP] Memulai pemantauan sensor dan eksekusi FSM secara realtime...");
+    Serial.println("\n[SIAP] ESP32 Master siap menerima stream ultrasonik dari Slave dan mengelola IoT!");
     Serial.println("[TIPS] Ketik 'h' lalu tekan Enter untuk melihat perintah interaktif.\n");
 }
 
@@ -83,12 +110,14 @@ void loop() {
 
     // 0. Layani Web Server Captive Portal jika mode AP sedang aktif
     wifiPortal.loop();
-    // 1. Pembacaan Ultrasonik Sekuensial Non-Blocking (1 sensor setiap 40 ms)
-    //    dan evaluasi FSM Kapasitas Rak per lantai
-    if (currentMillis - lastUltrasonicPoll >= INTERVAL_ULTRASONIC_POLL_MS) {
-        lastUltrasonicPoll = currentMillis;
-        ultrasonicArray.pollNextSensor(systemState);
-        rackFsm.update(systemState);
+
+    // 1. Baca stream data jarak ultrasonik dari ESP Slave via UART Serial2
+    handleSlaveUart();
+
+    // Cek timeout status koneksi UART Slave (3 detik tanpa paket)
+    if (slaveConnected && (currentMillis - lastSlavePacketMs > 3000)) {
+        slaveConnected = false;
+        Serial.println("\n[PERINGATAN UART] Kehilangan komunikasi dengan ESP32 Slave (>3 detik)!\n");
     }
 
     // 2. Pembacaan Sensor Lingkungan (DHT11 & MQ2) setiap 2 detik
@@ -99,6 +128,7 @@ void loop() {
 
     // 3. Eksekusi FSM Keamanan setiap siklus loop agar pulsa alarm buzzer non-blocking akurat
     safetyFsm.update(systemState);
+
     // 4. Pengiriman Telemetri MQTT Berbasis JSON setiap 2 detik
     if (currentMillis - lastTelemetryPublish >= INTERVAL_TELEMETRY_MS) {
         lastTelemetryPublish = currentMillis;
@@ -108,9 +138,8 @@ void loop() {
     // 5. Pemeliharaan Koneksi Wi-Fi & MQTT Client Non-Blocking
     mqttManager.loop();
 
-    // 6. Menampilkan Laporan Diagnostik ke Serial Monitor dengan jeda yang nyaman dibaca
+    // 6. Menampilkan Laporan Diagnostik ke Serial Monitor dengan jeda berkala
     if (wifiPortal.isPortalActive()) {
-        // Saat portal aktif, jangan banjiri serial dengan dashboard sensor agar layar tenang
         if (currentMillis - lastDashboardPrint >= 8000) {
             lastDashboardPrint = currentMillis;
             Serial.println("\n==================================================");
@@ -120,14 +149,53 @@ void loop() {
             Serial.println("==================================================\n");
         }
     } else {
-        // Mode normal: tampilkan setiap 5 detik (ada jeda yang cukup untuk membaca)
         if (currentMillis - lastDashboardPrint >= 5000) {
             lastDashboardPrint = currentMillis;
             printDashboard();
         }
     }
+
     // 7. Penanganan Perintah Masuk via Serial Monitor
     handleSerialCommands();
+}
+
+void handleSlaveUart() {
+    while (Serial2.available()) {
+        char c = (char)Serial2.read();
+        if (c == '\n') {
+            slaveBuffer[slaveBufferIndex] = '\0';
+            if (slaveBufferIndex > 0) {
+                parseSlavePacket(slaveBuffer);
+            }
+            slaveBufferIndex = 0;
+        } else if (c != '\r' && slaveBufferIndex < sizeof(slaveBuffer) - 1) {
+            slaveBuffer[slaveBufferIndex++] = c;
+        }
+    }
+}
+
+void parseSlavePacket(const char* json) {
+    JsonDocument doc;
+    DeserializationError error = deserializeJson(doc, json);
+    if (error) {
+        return; // Abaikan baris rusak
+    }
+
+    if (doc["f1_l"].is<float>() && doc["f1_r"].is<float>()) {
+        systemState.floors[0].distance_left_cm  = doc["f1_l"].as<float>();
+        systemState.floors[0].distance_right_cm = doc["f1_r"].as<float>();
+        systemState.floors[1].distance_left_cm  = doc["f2_l"].as<float>();
+        systemState.floors[1].distance_right_cm = doc["f2_r"].as<float>();
+        systemState.floors[2].distance_left_cm  = doc["f3_l"].as<float>();
+        systemState.floors[2].distance_right_cm = doc["f3_r"].as<float>();
+
+        lastSlavePacketMs = millis();
+        slaveConnected = true;
+        slavePacketCount++;
+
+        // Evaluasi FSM Kapasitas Rak seketika dengan data jarak terbaru & update warna LED
+        rackFsm.update(systemState);
+    }
 }
 
 void runStartupSelfTest() {
@@ -155,11 +223,21 @@ void runStartupSelfTest() {
 
 void printDashboard() {
     Serial.println("------------------------------------------------------------------");
-    Serial.printf("[DIAGNOSTIK SENSOR & FSM] Waktu Aktif: %lu detik\n", millis() / 1000);
+    Serial.printf("[DIAGNOSTIK MASTER & FSM] Waktu Aktif: %lu detik\n", millis() / 1000);
     Serial.println("------------------------------------------------------------------");
 
-    // 1. Data Jarak 6 Sensor Ultrasonik & FSM Rak
-    Serial.println("1. Status Kapasitas Rak (HC-SR04 & RackFSM):");
+    // 0. Status UART ESP Slave
+    Serial.println("0. Status Komunikasi UART ESP Slave:");
+    if (slaveConnected) {
+        Serial.printf("   * Link UART       : TERHUBUNG / AKTIF (Paket: #%lu, delay: %lu ms)\n",
+                      slavePacketCount, millis() - lastSlavePacketMs);
+    } else {
+        Serial.printf("   * Link UART       : MENUNGGU DATA SLAVE (RX: GPIO %d, TX: GPIO %d)\n",
+                      PIN_MASTER_UART_RX, PIN_MASTER_UART_TX);
+    }
+
+    // 1. Data Jarak 6 Sensor Ultrasonik (dari Slave) & FSM Rak
+    Serial.println("\n1. Status Kapasitas Rak (Data Slave HC-SR04 & RackFSM):");
     const char* floorNames[3] = {"Lantai 1 (Rak 1)", "Lantai 2 (Rak 2)", "Lantai 3 (Rak 3)"};
     for (int i = 0; i < 3; i++) {
         float dL = systemState.floors[i].distance_left_cm;
@@ -310,12 +388,16 @@ void handleSerialCommands() {
 
         case 'u':
         case 'U':
-            Serial.println("\n[MANUAL TEST] Pembacaan langsung 6 ultrasonik: ");
-            for (uint8_t i = 0; i < 6; i++) {
-                float d = ultrasonicArray.readDirect(i);
-                Serial.printf("   Sensor [%d] %s: %.1f cm\n", i, ultrasonicArray.getSensorName(i), d);
-                delay(40);
-            }
+            Serial.println("\n[STATUS ULTRASONIK DARI SLAVE]:");
+            Serial.printf("   Lantai 1 -> Kiri: %.1f cm | Kanan: %.1f cm\n",
+                          systemState.floors[0].distance_left_cm, systemState.floors[0].distance_right_cm);
+            Serial.printf("   Lantai 2 -> Kiri: %.1f cm | Kanan: %.1f cm\n",
+                          systemState.floors[1].distance_left_cm, systemState.floors[1].distance_right_cm);
+            Serial.printf("   Lantai 3 -> Kiri: %.1f cm | Kanan: %.1f cm\n",
+                          systemState.floors[2].distance_left_cm, systemState.floors[2].distance_right_cm);
+            Serial.printf("   Status Slave UART: %s (Paket: %lu, Delay: %lu ms)\n\n",
+                          slaveConnected ? "ONLINE" : "OFFLINE / TIMEOUT",
+                          slavePacketCount, millis() - lastSlavePacketMs);
             break;
 
         case 'w':
@@ -332,11 +414,11 @@ void handleSerialCommands() {
 
         case 'h':
         case 'H':
-            Serial.println("\n--- MENU BANTUAN SERIAL MONITOR ---");
+            Serial.println("\n--- MENU BANTUAN SERIAL MONITOR (MASTER) ---");
             Serial.println("  'b'        : Beep Buzzer sekali (300 ms)");
             Serial.println("  'r'        : Tes siklus warna 3x LED RGB (Merah -> Hijau -> Biru)");
             Serial.println("  'c'        : Beralih mode polaritas LED RGB (Anode / Cathode)");
-            Serial.println("  'u'        : Baca langsung 6 sensor ultrasonik");
+            Serial.println("  'u'        : Tampilkan jarak 6 sensor ultrasonik terbaru dari Slave");
             Serial.println("  'MUTE'/'m' : FSM Safety - MUTE / Diamkan alarm bahaya");
             Serial.println("  'ON'/'o'   : FSM Safety - Nyalakan Buzzer uji manual (MANUAL_TEST)");
             Serial.println("  'OFF'      : FSM Safety - Matikan Buzzer uji manual");
@@ -344,7 +426,7 @@ void handleSerialCommands() {
             Serial.println("  'w'        : Buka SoftAP Captive Portal Konfigurasi Wi-Fi");
             Serial.println("  'k'        : Reset kredensial Wi-Fi NVS ke default");
             Serial.println("  'h'        : Tampilkan menu bantuan ini");
-            Serial.println("------------------------------------");
+            Serial.println("--------------------------------------------");
             break;
 
         default:
