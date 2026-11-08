@@ -11,7 +11,7 @@ int main() {
     std::cout << "=== RUNNING FSM INTEGRATION & LOGIC TESTS ===" << std::endl;
 
     // 1. Inisialisasi Driver & FSM
-    RgbIndicator rgb(true);
+    RgbIndicator rgb(false); // Common Cathode (-) (kaki panjang ke GND)
     AlarmBuzzer buzzer;
     RackFSM rackFsm(rgb);
     SafetyFSM safetyFsm(buzzer, &rgb);

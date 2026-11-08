@@ -17,7 +17,7 @@
 
 #define PIN_BUZZER     13
 
-bool isCommonAnode = true; // Default Common Anode (+)
+bool isCommonAnode = false; // Default Common Cathode (-) (Kaki panjang ke GND)
 
 const uint8_t PINS_R[3] = {PIN_RGB1_RED, PIN_RGB2_RED, PIN_RGB3_RED};
 const uint8_t PINS_G[3] = {PIN_RGB1_GREEN, PIN_RGB2_GREEN, PIN_RGB3_GREEN};

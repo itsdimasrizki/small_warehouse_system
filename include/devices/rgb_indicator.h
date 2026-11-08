@@ -13,8 +13,8 @@ class RgbIndicator {
 public:
     static const uint8_t RACK_COUNT = 3;
 
-    // Default true untuk Common Anode (+)
-    RgbIndicator(bool commonAnode = true);
+    // Default false untuk Common Cathode (-) (kaki panjang ke GND)
+    RgbIndicator(bool commonAnode = false);
 
     void begin();
 

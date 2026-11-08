@@ -20,8 +20,9 @@ void RgbIndicator::begin() {
 }
 
 void RgbIndicator::writePwm(uint8_t pin, uint8_t value) {
-    // Gunakan kontrol digital penuh (0V / 3.3V) agar tidak ada bug overflow timer LEDC PWM
-    // yang membuat pin biru menyala statis pada Common Anode
+    // Gunakan kontrol digital penuh (0V / 3.3V)
+    // Common Cathode (-): Kaki panjang ke GND -> HIGH = ON, LOW = OFF
+    // Common Anode (+):   Kaki panjang ke 3.3V -> LOW = ON, HIGH = OFF
     if (isCommonAnode) {
         digitalWrite(pin, (value > 127) ? LOW : HIGH);
     } else {

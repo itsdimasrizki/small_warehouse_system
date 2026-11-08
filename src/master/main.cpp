@@ -26,7 +26,7 @@
 
 // Inisialisasi Driver Perangkat Keras
 EnvSensors envSensors;
-RgbIndicator rgbIndicator(true); // Default Common Anode (+)
+RgbIndicator rgbIndicator(false); // Default Common Cathode (-) (Kaki panjang ke GND)
 AlarmBuzzer buzzer;
 
 // Inisialisasi Finite State Machine (FSM)
@@ -52,7 +52,7 @@ static unsigned long rawBytesCount = 0;
 static unsigned long parseErrorCount = 0;
 static bool slaveConnected = false;
 
-bool isCommonAnode = true;
+bool isCommonAnode = false; // Default Common Cathode (-) (Kaki panjang ke GND)
 
 void runStartupSelfTest();
 void printDashboard();

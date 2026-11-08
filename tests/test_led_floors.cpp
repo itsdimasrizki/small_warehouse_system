@@ -21,8 +21,8 @@
  *       2. Interaktif: Ketik "1", lalu ketik "r", "x", dsb.
  *       3. Massal: all r, all g, all b, all x, all off
  *   - Konfigurasi:
- *       'ca' : Common Anode (+)  -> Sinyal LOW = ON, HIGH = OFF [Default]
- *       'cc' : Common Cathode (-) -> Sinyal HIGH = ON, LOW = OFF
+ *       'cc' : Common Cathode / Katoda (-) -> Sinyal HIGH = ON, LOW = OFF [Default]
+ *       'ca' : Common Anode (+)            -> Sinyal LOW = ON, HIGH = OFF
  *       'speed <ms>' : Mengatur jeda gantian mode 'x' (default 500 ms)
  *       'status' / 's' : Menampilkan tabel status pin & mode
  *       'help' / '?'   : Menampilkan panduan perintah
@@ -87,13 +87,13 @@ void processLedCycle();
 
 // Inisialisasi konfigurasi pin masing-masing lantai
 static FloorLedChannel floors[3] = {
-    { 1, PIN_F1_RED, PIN_F1_GREEN, PIN_F1_BLUE, MODE_OFF, 0, 0, HIGH, HIGH, HIGH },
-    { 2, PIN_F2_RED, PIN_F2_GREEN, PIN_F2_BLUE, MODE_OFF, 0, 0, HIGH, HIGH, HIGH },
-    { 3, PIN_F3_RED, PIN_F3_GREEN, PIN_F3_BLUE, MODE_OFF, 0, 0, HIGH, HIGH, HIGH }
+    { 1, PIN_F1_RED, PIN_F1_GREEN, PIN_F1_BLUE, MODE_OFF, 0, 0, LOW, LOW, LOW },
+    { 2, PIN_F2_RED, PIN_F2_GREEN, PIN_F2_BLUE, MODE_OFF, 0, 0, LOW, LOW, LOW },
+    { 3, PIN_F3_RED, PIN_F3_GREEN, PIN_F3_BLUE, MODE_OFF, 0, 0, LOW, LOW, LOW }
 };
 
 // Konfigurasi sistem
-static bool isCommonAnode = true;          // Default Common Anode (Active LOW)
+static bool isCommonAnode = false;         // Default Common Cathode / Katoda (Active HIGH)
 static uint8_t selectedFloor = 0;           // Lantai aktif untuk mode input bertahap (0 = Lantai 1)
 static unsigned long cycleIntervalMs = 500; // Kecepatan siklus mode 'x' (ms)
 static String serialInputBuffer = "";
@@ -182,7 +182,7 @@ void printFloorState(uint8_t floorIdx) {
 void printStatus() {
     Serial.println(F("\n================= STATUS INDIKATOR LED LANTAI ================="));
     Serial.print(F("Tipe LED Aktif      : "));
-    Serial.println(isCommonAnode ? F("Common Anode (+) [Active LOW]") : F("Common Cathode (-) [Active HIGH]"));
+    Serial.println(isCommonAnode ? F("Common Anode (+) [Active LOW]") : F("Common Cathode / Katoda (-) [Active HIGH, Default]"));
     Serial.print(F("Lantai Terpilih     : Lantai "));
     Serial.println(selectedFloor + 1);
     Serial.print(F("Kecepatan Siklus 'x': "));
@@ -242,8 +242,8 @@ void printHelp() {
     Serial.println(F("  all x                 : Nyalakan semua lantai bergantian [x]"));
     Serial.println(F("  all off / off         : Matikan semua lantai"));
     Serial.println(F("  status / s            : Tampilkan status & logika pin tiap lantai"));
-    Serial.println(F("  ca                    : Set Common Anode (+) [Active LOW, Default]"));
-    Serial.println(F("  cc                    : Set Common Cathode (-) [Active HIGH]"));
+    Serial.println(F("  cc                    : Set Common Cathode / Katoda (-) [Active HIGH, Default]"));
+    Serial.println(F("  ca                    : Set Common Anode (+) [Active LOW]"));
     Serial.println(F("  speed <ms>            : Set jeda gantian mode 'x' (contoh: speed 300)"));
     Serial.println(F("  help / ?              : Menampilkan menu bantuan ini"));
     Serial.println(F("===================================================================\n"));

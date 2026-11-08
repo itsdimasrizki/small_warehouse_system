@@ -48,9 +48,9 @@ Proyek ini menggunakan arsitektur **Dual ESP32 (Master & Slave)** yang terhubung
 | **Sensor Suhu DHT11** | DATA | `GPIO 4` | Digital I/O | Resistor pull-up 10k ke 3.3V |
 | **Sensor Asap MQ2** | A0 (Analog) | `GPIO 36` (VP) | Analog Input | ADC1 (Aman dengan Wi-Fi) |
 | **Active Buzzer** | Positif (+) | `GPIO 13` | Digital Output | Active High |
-| **LED RGB Rak 1 (Lantai 1)** | R / G / B | `GPIO 23` / `22` / `21` | Digital Output | Resistor 220 Ohm (Common Anode) |
-| **LED RGB Rak 2 (Lantai 2)** | R / G / B | `GPIO 19` / `18` / `5`  | Digital Output | Resistor 220 Ohm (Common Anode) |
-| **LED RGB Rak 3 (Lantai 3)** | R / G / B | `GPIO 17` / `16` / `14` | Digital Output | Resistor 220 Ohm (Common Anode) |
+| **LED RGB Rak 1 (Lantai 1)** | R / G / B | `GPIO 23` / `22` / `21` | Digital Output | Resistor 220 Ohm (Common Cathode / Kaki panjang ke GND) |
+| **LED RGB Rak 2 (Lantai 2)** | R / G / B | `GPIO 19` / `18` / `5`  | Digital Output | Resistor 220 Ohm (Common Cathode / Kaki panjang ke GND) |
+| **LED RGB Rak 3 (Lantai 3)** | R / G / B | `GPIO 17` / `16` / `14` | Digital Output | Resistor 220 Ohm (Common Cathode / Kaki panjang ke GND) |
 ---
 ## 📁 Struktur Direktori Proyek
 
@@ -197,7 +197,7 @@ Tersedia sketch terpisah di dalam folder `examples/` jika ingin menguji satu kom
 | :--- | :--- | :--- |
 | **Permission Denied `/dev/ttyUSB0` (Linux)** | User belum masuk ke grup `dialout` | Jalankan: `sudo usermod -a -G dialout $USER` lalu logout dan login kembali. |
 | **Output Serial Monitor Berantakan / Karakter Aneh** | Baud rate tidak cocok | Pastikan baud rate diset ke `115200` (`pio device monitor -b 115200`). |
-| **Warna LED RGB Terbalik (misal Hijau jadi Ungu)** | Perbedaan tipe LED Common Cathode (-) vs Common Anode (+) | Ketik `c` di Serial Monitor, atau ubah parameter constructor di kode: `RgbIndicator rgbIndicator(true);`. |
+| **Warna LED RGB Terbalik / Nyampur** | Perbedaan tipe LED Common Cathode (-) vs Common Anode (+) | Rangkaian menggunakan Common Cathode (kaki panjang ke GND). Default kode sudah diset `RgbIndicator rgbIndicator(false);`. Anda juga dapat menekan 'c' di Serial Monitor untuk beralih mode. |
 | **Jarak Ultrasonik Selalu 0 cm** | Pin ECHO/TRIG terbalik atau tegangan 5V merusak pin ESP32 | Pastikan pin TRIG dan ECHO terhubung sesuai tabel pinout. Gunakan voltage divider resistor 1k & 2k pada jalur ECHO. |
 | **DHT11 Selalu NaN / Error** | Resistor pull-up belum terpasang | Pasang resistor $10\text{ k}\Omega$ antara pin DATA DHT11 (`GPIO 4`) dan jalur $3.3\text{V}$. |
 | **MQ2 Error atau Mengganggu Wi-Fi** | MQ2 dicolok ke pin ADC2 | Pastikan pin analog MQ2 selalu dicolok ke **GPIO 34** (ADC1). |
