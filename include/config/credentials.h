@@ -17,5 +17,7 @@
 #define TOPIC_OTA_UPDATE    "warehouse/small_warehouse/ota/update"
 #define TOPIC_OTA_STATUS    "warehouse/small_warehouse/ota/status"
 
-// Versi Firmware Aktif
+// Versi Firmware Aktif (Dapat di-override otomatis oleh CI/CD via build flag)
+#ifndef FIRMWARE_VERSION
 #define FIRMWARE_VERSION    "1.0.0"
+#endif

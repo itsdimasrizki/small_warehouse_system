@@ -31,20 +31,24 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-      - name: Build Firmware ESP32 Master
-        run: |
-          pio run -e esp32-master
-
-      - name: Prepare Release Asset
+      - name: Prepare Release Version Tag
         id: prep
         run: |
           VERSION="v1.0.${{ github.run_number }}"
           echo "tag=$VERSION" >> $GITHUB_OUTPUT
-          mkdir -p dist
-          cp .pio/build/esp32-master/firmware.bin dist/firmware-master-${VERSION}.bin
-          cp .pio/build/esp32-master/firmware.bin dist/firmware-master-latest.bin
           echo "DOWNLOAD_URL=https://github.com/${{ github.repository }}/releases/download/${VERSION}/firmware-master-${VERSION}.bin" >> $GITHUB_OUTPUT
 
+      - name: Build Firmware ESP32 Master
+        env:
+          PLATFORMIO_BUILD_FLAGS: -DFIRMWARE_VERSION=\"${{ steps.prep.outputs.tag }}\"
+        run: |
+          pio run -e esp32-master
+
+      - name: Prepare Release Asset
+        run: |
+          mkdir -p dist
+          cp .pio/build/esp32-master/firmware.bin dist/firmware-master-${{ steps.prep.outputs.tag }}.bin
+          cp .pio/build/esp32-master/firmware.bin dist/firmware-master-latest.bin
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
