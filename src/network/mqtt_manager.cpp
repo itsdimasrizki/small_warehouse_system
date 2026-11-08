@@ -39,9 +39,10 @@ void MqttManager::loop() {
         if (!mqttClient.connected()) {
             unsigned long now = millis();
             if (now - lastReconnectAttempt >= INTERVAL_MQTT_RECONNECT_MS) {
-                lastReconnectAttempt = now;
                 if (reconnectMqtt()) {
                     lastReconnectAttempt = 0;
+                } else {
+                    lastReconnectAttempt = millis();
                 }
             }
         } else {
