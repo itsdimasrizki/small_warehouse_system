@@ -18,18 +18,18 @@ MqttManager::MqttManager(SafetyFSM &safetyFsm, WifiPortal* wifiPortal, OtaManage
 void MqttManager::begin() {
     Serial.println("\n[MQTT] Menginisialisasi MQTT Client...");
 
-    const char* broker = (portal && portal->getBroker().length() > 0) ? portal->getBroker().c_str() : MQTT_BROKER;
-    uint16_t port = (portal && portal->getPort() > 0) ? portal->getPort() : MQTT_PORT;
-
     // Mengizinkan koneksi TLS/SSL port 8883 tanpa validasi manual sertifikat CA
     espClient.setInsecure();
-    // Konfigurasi PubSubClient
-    mqttClient.setServer(broker, port);
+    espClient.setTimeout(10);
+
+    // Konfigurasi PubSubClient menggunakan konstanta literal statis dari credentials.h
+    mqttClient.setServer(MQTT_BROKER, MQTT_PORT);
     mqttClient.setCallback(mqttCallback);
+    mqttClient.setSocketTimeout(10);
     // Perbesar buffer paket agar JSON lengkap tidak terpotong (default PubSubClient hanya 128/256 bytes)
     mqttClient.setBufferSize(1024);
 
-    Serial.printf("[MQTT] Broker dikonfigurasi ke: %s:%d (Buffer: 1024 bytes)\n", broker, port);
+    Serial.printf("[MQTT] Broker dikonfigurasi ke: %s:%d (Buffer: 1024 bytes)\n", MQTT_BROKER, MQTT_PORT);
 }
 
 void MqttManager::loop() {
@@ -78,11 +78,13 @@ void MqttManager::ensureWifiConnected() {
 }
 
 bool MqttManager::reconnectMqtt() {
-    const char* broker = (portal && portal->getBroker().length() > 0) ? portal->getBroker().c_str() : MQTT_BROKER;
-    uint16_t port = (portal && portal->getPort() > 0) ? portal->getPort() : MQTT_PORT;
-    mqttClient.setServer(broker, port);
+    // Pastikan konfigurasi TLS dan socket timeout disetel sebelum koneksi TLS port 8883
+    espClient.setInsecure();
+    espClient.setTimeout(10);
+    mqttClient.setServer(MQTT_BROKER, MQTT_PORT);
+    mqttClient.setSocketTimeout(10);
 
-    Serial.printf("[MQTT] Menghubungkan ke broker %s:%d...", broker, port);
+    Serial.printf("[MQTT] Menghubungkan ke broker %s:%d...", MQTT_BROKER, MQTT_PORT);
 
     bool connected = mqttClient.connect(MQTT_CLIENT_ID, MQTT_USER, MQTT_PASSWORD);
 

@@ -17,9 +17,21 @@ void WifiPortal::loadCredentials() {
     preferences.begin("warehouse", true); // Mode read-only
     storedSSID = preferences.getString("ssid", "");
     storedPass = preferences.getString("pass", "");
-    storedBroker = preferences.getString("broker", MQTT_BROKER);
-    storedPort = preferences.getUShort("port", MQTT_PORT);
+    String nvsBroker = preferences.getString("broker", MQTT_BROKER);
+    uint16_t nvsPort = preferences.getUShort("port", MQTT_PORT);
     preferences.end();
+
+    // Selalu pastikan mengambil nilai terbaru dari makro MQTT_BROKER dan MQTT_PORT di credentials.h
+    storedBroker = MQTT_BROKER;
+    storedPort = MQTT_PORT;
+
+    // Sinkronkan nilai NVS jika berbeda dari credentials.h agar broker lama tidak tersimpan
+    if (nvsBroker != MQTT_BROKER || nvsPort != MQTT_PORT) {
+        preferences.begin("warehouse", false);
+        preferences.putString("broker", MQTT_BROKER);
+        preferences.putUShort("port", MQTT_PORT);
+        preferences.end();
+    }
 }
 
 void WifiPortal::saveCredentials(const String &ssid, const String &pass, const String &broker, uint16_t port) {

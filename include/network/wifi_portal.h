@@ -30,9 +30,9 @@ public:
     bool isConnected() const { return WiFi.status() == WL_CONNECTED; }
 
     // Kredensial aktif yang tersimpan
-    String getSSID() const { return storedSSID; }
-    String getPassword() const { return storedPass; }
-    String getBroker() const { return storedBroker; }
+    const String& getSSID() const { return storedSSID; }
+    const String& getPassword() const { return storedPass; }
+    const String& getBroker() const { return storedBroker; }
     uint16_t getPort() const { return storedPort; }
 
 private:
