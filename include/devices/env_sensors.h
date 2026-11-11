@@ -19,4 +19,9 @@ public:
 
 private:
     DHT dht;
+    bool simInitialized;
+    float simTempC;
+    float simHumidityPct;
+
+    void updateSimulatedValues(int smokeAdc);
 };
