@@ -22,9 +22,9 @@
 // - Jarak < 24 cm pada 2 sisi = Terisi Penuh (Hijau)
 // - Hazard (Suhu/Gas melebihi threshold) = Merah Kedip-Kedip
 // Ambang batas deteksi barang (cm):
-#define RACK1_DETECT_THRESHOLD_CM   18.0f 
-#define RACK2_DETECT_THRESHOLD_CM   18.0f   
-#define RACK3_DETECT_THRESHOLD_CM   18.0f   
+#define RACK1_DETECT_THRESHOLD_CM   5.0f 
+#define RACK2_DETECT_THRESHOLD_CM   5.0f   
+#define RACK3_DETECT_THRESHOLD_CM   5.0f   
 
 // Backward compatibility
 #define RACK_DETECT_THRESHOLD_CM    RACK1_DETECT_THRESHOLD_CM
