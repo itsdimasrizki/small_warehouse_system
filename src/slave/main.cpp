@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
+#if __has_include("esp_private/brownout.h")
 #include "esp_private/brownout.h"
+#endif
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
 #include "config/pins.h"
@@ -120,7 +122,9 @@ void triggerSimultaneous(uint8_t pin1, uint8_t pin2, uint8_t pin3) {
 
 void setup() {
     // Nonaktifkan brownout agar lonjakan arus tidak mereset board
+#if __has_include("esp_private/brownout.h")
     esp_brownout_disable();
+#endif
     WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
 
     // USB Serial untuk debugging monitor PC

@@ -78,22 +78,34 @@ void RackFSM::update(SystemState &state) {
         totalItems += itemCount;
         // Logika 3 Status Warna per Rak (Instant evaluation):
         // 0 sisi deteksi = Kosong          -> MERAH (255, 0, 0)
-        // 1 sisi deteksi = Terisi Sebagian -> BIRU  (0, 0, 255)
-        // 2 sisi deteksi = Terisi Penuh    -> HIJAU (0, 255, 0)
+        // 1 sisi / 2 sisi dengan ruang kosong = Terisi Sebagian -> BIRU  (0, 0, 255)
+        // 2 sisi & ruang terisi penuh      = Terisi Penuh    -> HIJAU (0, 255, 0)
         if (detectedSides == 0) {
             state.floors[i].rack_state = STATE_RACK_EMPTY;
             if (!state.hazard_detected) {
                 rgb.setColorAndSync(i, 255, 0, 0, state);
             }
-        } else if (detectedSides == 1) {
+        } else if (detectedSides == 2) {
+            // Jika 2 sisi mendeteksi objek, evaluasi apakah rak benar-benar penuh
+            // Rak hanya FULL jika sisa celah kosong (dL + dR) sempit (< 18 cm) atau jumlah barang padat (>= 4 unit)
+            float emptyGap = (dL > 0.0f && dR > 0.0f) ? (dL + dR) : (rackLength - occupiedSpan);
+            if (emptyGap < 18.0f || itemCount >= 4) {
+                state.floors[i].rack_state = STATE_RACK_FULL;
+                if (!state.hazard_detected) {
+                    rgb.setColorAndSync(i, 0, 255, 0, state);
+                }
+            } else {
+                // Objek berada di tengah (atau 2 objek menyisakan ruang kosong besar) -> PARTIAL (BIRU)
+                state.floors[i].rack_state = STATE_RACK_PARTIAL;
+                if (!state.hazard_detected) {
+                    rgb.setColorAndSync(i, 0, 0, 255, state);
+                }
+            }
+        } else {
+            // Hanya 1 sisi mendeteksi objek
             state.floors[i].rack_state = STATE_RACK_PARTIAL;
             if (!state.hazard_detected) {
                 rgb.setColorAndSync(i, 0, 0, 255, state);
-            }
-        } else {
-            state.floors[i].rack_state = STATE_RACK_FULL;
-            if (!state.hazard_detected) {
-                rgb.setColorAndSync(i, 0, 255, 0, state);
             }
         }
     }

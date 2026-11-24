@@ -121,13 +121,13 @@ void WifiPortal::startPortal() {
     uint16_t chipId = (uint16_t)(ESP.getEfuseMac() & 0xFFFF);
     snprintf(apName, sizeof(apName), "Warehouse-Rak-%04X", chipId);
 
-    // 3. Konfigurasi SoftAP IP & pastikan DNS server (apIP) disebarkan oleh DHCP server ke klien HP via Option 6
-    WiFi.softAPConfig(apIP, apIP, netMask, IPAddress(192, 168, 4, 2), apIP);
+    // 3. Konfigurasi SoftAP IP & pastikan DHCP server melayani IP ke klien HP
+    WiFi.softAPConfig(apIP, apIP, netMask, IPAddress(192, 168, 4, 2));
     bool apSuccess = WiFi.softAP(apName);
     if (!apSuccess) {
         Serial.println("[WARN] Gagal menyalakan SoftAP, mencoba inisialisasi ulang...");
         delay(100);
-        WiFi.softAPConfig(apIP, apIP, netMask, IPAddress(192, 168, 4, 2), apIP);
+        WiFi.softAPConfig(apIP, apIP, netMask, IPAddress(192, 168, 4, 2));
         apSuccess = WiFi.softAP(apName);
     }
     WiFi.setTxPower(WIFI_POWER_11dBm);

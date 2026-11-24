@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
+#if __has_include("esp_private/brownout.h")
 #include "esp_private/brownout.h"
+#endif
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
 #include "config/pins.h"
@@ -61,7 +63,9 @@ void parseSlavePacket(const char* json);
 
 void setup() {
     // 1. Nonaktifkan Brownout Detector agar lonjakan transmisi RF Wi-Fi tidak mereset ESP32
+#if __has_include("esp_private/brownout.h")
     esp_brownout_disable();
+#endif
     WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
 
     Serial.begin(115200);

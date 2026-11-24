@@ -78,8 +78,24 @@ int main() {
     assert(state.rack_state == STATE_RACK_PARTIAL);
     std::cout << "[PASS] Skenario B: Lantai 1 terisi 1 sisi -> STATE_RACK_PARTIAL (" << state.floors[0].item_count << " barang)." << std::endl;
 
-    // Skenario C: Lantai 1 terisi 2 sisi (Full -> Merah)
-    state.floors[0].distance_right_cm = 15.0f; // < 35cm
+    // Skenario B2: 2 Kardus di tengah (dL = 20cm, dR = 20cm < threshold 24cm)
+    // Walaupun 2 sisi mendeteksi, sisa ruang masih lebar (emptyGap = 40cm > 18cm, itemCount = 2)
+    // Sistem HARUS menghasilkan STATE_RACK_PARTIAL (BIRU), bukan FULL (HIJAU)!
+    state.floors[0].distance_left_cm = 20.0f;
+    state.floors[0].distance_right_cm = 20.0f;
+    rackFsm.update(state);
+
+    assert(state.floors[0].rack_state == STATE_RACK_PARTIAL);
+    assert(state.floors[0].detected_sides == 2);
+    assert(state.floors[0].item_count == 2);
+    assert(state.floors[0].rgb_b == 255); // Biru (Sebagian)
+    assert(state.floors[0].rgb_g == 0);   // Tidak boleh Hijau!
+    assert(state.floors[0].rgb_r == 0);
+    std::cout << "[PASS] Skenario B2: 2 kardus di tengah -> STATE_RACK_PARTIAL (BIRU, 2 unit)." << std::endl;
+
+    // Skenario C: Lantai 1 terisi padat/penuh (dL = 12cm, dR = 15cm -> itemCount = 4 -> FULL)
+    state.floors[0].distance_left_cm = 12.0f;
+    state.floors[0].distance_right_cm = 15.0f;
 
     rackFsm.update(state);
 
