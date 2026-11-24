@@ -87,15 +87,20 @@ void RackFSM::update(SystemState &state) {
             }
         } else if (detectedSides == 2) {
             // Jika 2 sisi mendeteksi objek, evaluasi apakah rak benar-benar penuh
-            // Rak hanya FULL jika sisa celah kosong (dL + dR) sempit (< 18 cm) atau jumlah barang padat (>= 4 unit)
+            // Hitung kapasitas maksimal rak (misal 58 cm / 8 cm = 7 unit)
+            int maxCapacity = static_cast<int>(rackLength / DEFAULT_ITEM_WIDTH_CM);
+            if (maxCapacity < 2) maxCapacity = 2;
+
             float emptyGap = (dL > 0.0f && dR > 0.0f) ? (dL + dR) : (rackLength - occupiedSpan);
-            if (emptyGap < 18.0f || itemCount >= 4) {
+            // Rak hanya FULL jika terisi mendekati kapasitas maksimal (itemCount >= maxCapacity - 1)
+            // DAN sisa celah kosong tidak melebihi toleransi 1 kardus (emptyGap <= DEFAULT_ITEM_WIDTH_CM + 2.0f, yaitu <= 10 cm)
+            if (itemCount >= (maxCapacity - 1) && emptyGap <= (DEFAULT_ITEM_WIDTH_CM + 2.0f)) {
                 state.floors[i].rack_state = STATE_RACK_FULL;
                 if (!state.hazard_detected) {
                     rgb.setColorAndSync(i, 0, 255, 0, state);
                 }
             } else {
-                // Objek berada di tengah (atau 2 objek menyisakan ruang kosong besar) -> PARTIAL (BIRU)
+                // Terisi sebagian (1 s.d. 5 unit kardus) -> PARTIAL (BIRU)
                 state.floors[i].rack_state = STATE_RACK_PARTIAL;
                 if (!state.hazard_detected) {
                     rgb.setColorAndSync(i, 0, 0, 255, state);
